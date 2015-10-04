@@ -1,6 +1,6 @@
 Similar works
 -------------
-[kNN-CUDA](git@github.com:fab4100/dphpc-project.git) - GPU implementation.
+[kNN-CUDA](https://github.com/vincentfpgarcia/kNN-CUDA) - GPU implementation.
 
 Things to try
 -------------
