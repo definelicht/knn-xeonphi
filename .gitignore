@@ -2,3 +2,4 @@
 *.bak
 *.o
 *.swp
+build/
