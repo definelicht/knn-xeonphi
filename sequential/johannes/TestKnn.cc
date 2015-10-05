@@ -1,6 +1,7 @@
-#include "knnnaive.h"
+#include "KnnNaive.h"
 #include <iostream>
 #include <random>
+#include <utility>
 
 int main() {
 
@@ -8,7 +9,7 @@ int main() {
       {1, 1},  {2, 1},  {1, 2},   {2, 2},   {-1, 1},  {-2, 1},
       {-1, 2}, {-2, 2}, {-1, -1}, {-2, -1}, {-1, -2}, {-2, -2},
       {1, -1}, {2, -1}, {1, -2},  {2, -2}};
-  std::vector<int> labels{0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3};
+  std::vector<int> labels{0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2};
   KnnNaive<std::pair<float, float>, int> knn(training, labels);
 
   std::mt19937 rng;
