@@ -1,7 +1,7 @@
 Links
 -------------
-[kNN-CUDA](https://github.com/vincentfpgarcia/kNN-CUDA) - GPU implementation.
-[Handwritten digits](http://yann.lecun.com/exdb/mnist/) - Data set to test KNN implementation on.
+- [kNN-CUDA](https://github.com/vincentfpgarcia/kNN-CUDA) - GPU implementation.
+- [Handwritten digits](http://yann.lecun.com/exdb/mnist/) - Data set to test KNN implementation on.
 
 Things to try
 -------------
