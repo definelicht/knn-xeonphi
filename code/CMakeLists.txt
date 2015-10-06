@@ -1,0 +1,38 @@
+cmake_minimum_required(VERSION 3.0)
+project(knn)
+
+find_package(Threads REQUIRED)
+set(KNN_LIBS ${KNN_LIBS} ${CMAKE_THREAD_LIBS_INIT})
+
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1z -O3")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Weffc++")
+
+set(KNN_SRC
+  LoadBinary.cc)
+
+set(KNN_APPS_SRC)
+
+set(KNN_TEST_SRC
+  TestLoadBinary.cc)
+
+set(KNN_SRC_PATHS)
+foreach(SRC_FILE ${KNN_SRC})
+  set(KNN_SRC_PATHS ${KNN_SRC_PATHS} ${CMAKE_CURRENT_SOURCE_DIR}/src/${SRC_FILE})
+endforeach()
+foreach(SRC_FILE ${KNN_APPS_SRC})
+  set(KNN_EXEC_PATHS ${KNN_EXEC_PATHS} ${CMAKE_CURRENT_SOURCE_DIR}/apps/${SRC_FILE})
+endforeach()
+foreach(SRC_FILE ${KNN_TEST_SRC})
+  set(KNN_EXEC_PATHS ${KNN_EXEC_PATHS} ${CMAKE_CURRENT_SOURCE_DIR}/tests/${SRC_FILE})
+endforeach()
+
+add_library(knn ${KNN_SRC_PATHS})
+target_link_libraries(knn ${KNN_LIBS})
+set(KNN_LIBS ${KNN_LIBS} knn)
+foreach(EXEC_PATH ${KNN_EXEC_PATHS})
+  get_filename_component(EXEC_FILE_NAME ${EXEC_PATH} NAME_WE)
+  add_executable(${EXEC_FILE_NAME} ${EXEC_PATH})
+  target_link_libraries(${EXEC_FILE_NAME} knn)
+endforeach()
