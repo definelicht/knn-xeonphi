@@ -28,14 +28,18 @@ public:
   public:
     Ptr(typename Node::TreeIterator_t const &node,
         typename Node::TreeIterator_t const &end);
-    Ptr Left();
-    Ptr Right();
-    Ptr Parent();
+    Ptr Left() const;
+    Ptr Right() const;
+    Ptr Parent() const;
+    bool GoLeft();
+    bool GoRight();
+    bool GoParent();
     bool inBounds() const;
     Point_t const& value() const;
     LabelType const& label() const;
   private:
-    const typename Node::TreeIterator_t node_, end_;
+    typename Node::TreeIterator_t node_;
+    const typename Node::TreeIterator_t end_;
   };
 
   KDTree(std::vector<Dim_t> const &points,
@@ -107,20 +111,35 @@ KDTree<DataType, LabelType>::Ptr::Ptr(typename Node::TreeIterator_t const &node,
 
 template <typename DataType, typename LabelType>
 typename KDTree<DataType, LabelType>::Ptr
-KDTree<DataType, LabelType>::Ptr::Left() {
+KDTree<DataType, LabelType>::Ptr::Left() const {
   return {node_->left, end_};
 }
 
 template <typename DataType, typename LabelType>
 typename KDTree<DataType, LabelType>::Ptr
-KDTree<DataType, LabelType>::Ptr::Right() {
+KDTree<DataType, LabelType>::Ptr::Right() const {
   return {node_->right, end_};
 }
 
 template <typename DataType, typename LabelType>
 typename KDTree<DataType, LabelType>::Ptr
-KDTree<DataType, LabelType>::Ptr::Parent() {
+KDTree<DataType, LabelType>::Ptr::Parent() const {
   return {node_->parent, end_};
+}
+
+template <typename DataType, typename LabelType>
+bool KDTree<DataType, LabelType>::Ptr::GoLeft() {
+  return (node_ = node_->left) != end_;
+}
+
+template <typename DataType, typename LabelType>
+bool KDTree<DataType, LabelType>::Ptr::GoRight() {
+  return (node_ = node_->right) != end_;
+}
+
+template <typename DataType, typename LabelType>
+bool KDTree<DataType, LabelType>::Ptr::GoParent() {
+  return (node_ = node_->parent) != end_;
 }
 
 template <typename DataType, typename LabelType>
