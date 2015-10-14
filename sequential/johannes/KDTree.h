@@ -1,7 +1,5 @@
 #pragma once
 
-#include <iostream>
-
 #include <numeric>   // std::iota
 #include <ostream>
 #include <stdexcept> // std::invalid_argument
