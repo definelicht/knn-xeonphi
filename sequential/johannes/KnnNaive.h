@@ -19,7 +19,7 @@ public:
 private:
   std::vector<T> points_;
   std::vector<int> labels_;
-  std::unordered_map<int, U> labelMapping_;
+  std::unordered_map<int, U> labelMapping_{};
 };
 
 template <typename T, typename U>
@@ -45,8 +45,9 @@ std::vector<U> KnnNaive<T, U>::Classify(
     std::function<V(T const &, T const &)> const &distFunc) const {
   assert(k <= static_cast<int>(points_.size()));
   std::vector<U> classification(data.size());
+  const int iEnd = data.size();
   #pragma omp parallel for
-  for (int i = 0, iEnd = data.size(); i < iEnd; ++i) {
+  for (int i = 0; i < iEnd; ++i) {
     auto bestDist = std::make_pair(std::vector<V>(k), std::vector<int>(k));
     for (int j = 0; j < k; ++j) {
       bestDist.first[j] = distFunc(data[i], points_[j]);

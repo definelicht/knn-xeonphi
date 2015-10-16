@@ -1,8 +1,10 @@
 #pragma once
 
-#include <numeric>   // std::iota
+#include <algorithm>  // std::sort
+#include <functional> // std::function
+#include <numeric>    // std::iota
 #include <ostream>
-#include <stdexcept> // std::invalid_argument
+#include <stdexcept>  // std::invalid_argument
 #include <string>
 #include <vector>
 
@@ -13,8 +15,9 @@ private:
     using TreeIterator_t = typename std::vector<Node>::const_iterator;
     std::vector<DataType> value;
     LabelType label;
+    size_t dim;
     TreeIterator_t parent, left, right;
-    Node(std::vector<DataType> &&_value, LabelType const &_label,
+    Node(std::vector<DataType> &&_value, LabelType const &_label, size_t _dim,
          TreeIterator_t const &_parent, TreeIterator_t const &_end);
   };
 
@@ -29,16 +32,19 @@ public:
     Ptr Left() const;
     Ptr Right() const;
     Ptr Parent() const;
-    bool GoLeft();
-    bool GoRight();
-    bool GoParent();
+    bool TryLeft();
+    bool TryRight();
+    bool TryParent();
     bool inBounds() const;
     Point_t const& value() const;
     LabelType const& label() const;
+    size_t dim() const;
   private:
     typename Node::TreeIterator_t node_;
     const typename Node::TreeIterator_t end_;
   };
+
+  KDTree();
 
   KDTree(std::vector<Dim_t> const &points,
          std::vector<LabelType> const &labels);
@@ -65,9 +71,12 @@ private:
       std::vector<size_t>::iterator begin, std::vector<size_t>::iterator end,
       size_t dim, typename Node::TreeIterator_t const &parent);
 
-  const size_t nDims_, size_;
+  size_t nDims_, size_;
   std::vector<Node> tree_{};
 };
+
+template <typename DataType, typename LabelType>
+KDTree<DataType, LabelType>::KDTree() : nDims_(0), size_(0) {}
 
 template <typename DataType, typename LabelType>
 KDTree<DataType, LabelType>::KDTree(std::vector<Dim_t> const &points,
@@ -97,10 +106,11 @@ KDTree<DataType, LabelType>::KDTree(std::vector<Dim_t> const &points,
 
 template <typename DataType, typename LabelType>
 KDTree<DataType, LabelType>::Node::Node(std::vector<DataType> &&_value,
-                                        LabelType const &_label,
+                                        LabelType const &_label, size_t _dim,
                                         TreeIterator_t const &_parent,
                                         TreeIterator_t const &_end)
-    : value(_value), label(_label), parent(_parent), left(_end), right(_end) {}
+    : value(_value), label(_label), dim(_dim), parent(_parent), left(_end),
+      right(_end) {}
 
 template <typename DataType, typename LabelType>
 KDTree<DataType, LabelType>::Ptr::Ptr(typename Node::TreeIterator_t const &node,
@@ -126,18 +136,30 @@ KDTree<DataType, LabelType>::Ptr::Parent() const {
 }
 
 template <typename DataType, typename LabelType>
-bool KDTree<DataType, LabelType>::Ptr::GoLeft() {
-  return (node_ = node_->left) != end_;
+bool KDTree<DataType, LabelType>::Ptr::TryLeft() {
+  if (node_->left != end_) {
+    node_ = node_->left;
+    return true;
+  }
+  return false;
 }
 
 template <typename DataType, typename LabelType>
-bool KDTree<DataType, LabelType>::Ptr::GoRight() {
-  return (node_ = node_->right) != end_;
+bool KDTree<DataType, LabelType>::Ptr::TryRight() {
+  if (node_->right != end_) {
+    node_ = node_->right;
+    return true;
+  }
+  return false;
 }
 
 template <typename DataType, typename LabelType>
-bool KDTree<DataType, LabelType>::Ptr::GoParent() {
-  return (node_ = node_->parent) != end_;
+bool KDTree<DataType, LabelType>::Ptr::TryParent() {
+  if (node_->parent != end_) {
+    node_ = node_->parent;
+    return true;
+  }
+  return false;
 }
 
 template <typename DataType, typename LabelType>
@@ -154,6 +176,11 @@ KDTree<DataType, LabelType>::Ptr::value() const {
 template <typename DataType, typename LabelType>
 LabelType const &KDTree<DataType, LabelType>::Ptr::label() const {
   return node_->label;
+}
+
+template <typename DataType, typename LabelType>
+size_t KDTree<DataType, LabelType>::Ptr::dim() const {
+  return node_->dim;
 }
 
 template <typename DataType, typename LabelType>
@@ -189,10 +216,10 @@ KDTree<DataType, LabelType>::BuildTree(
   auto treeItr_ = tree_.end();
   {
     std::vector<DataType> pivot(nDims_);
-    for (size_t d = 0; d < nDims_; ++d) {
+    for (size_t d = 0, dEnd = nDims_; d < dEnd; ++d) {
       pivot[d] = points[d][*median];
     }
-    tree_.emplace_back(std::move(pivot), labels[*median],
+    tree_.emplace_back(std::move(pivot), labels[*median], dim,
                        parent, tree_.cbegin() + size_);
   }
   if (++dim == points.size()) dim = 0;
