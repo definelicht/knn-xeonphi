@@ -26,6 +26,17 @@ public:
         memcpy(&_G[0][0], &(rhs._G[0][0]), N*N);
         memcpy(&_B[0][0], &(rhs._B[0][0]), N*N);
     }
+    Image_8bit& operator=(const Image_8bit& rhs)
+    {
+        if (this != &rhs)
+        {
+            _label = rhs._label;
+            memcpy(&_R[0][0], &(rhs._R[0][0]), N*N);
+            memcpy(&_G[0][0], &(rhs._G[0][0]), N*N);
+            memcpy(&_B[0][0], &(rhs._B[0][0]), N*N);
+        }
+        return *this;
+    }
 
     static const uint8_t size = N;
 
@@ -53,12 +64,12 @@ public:
     }
 
     inline uint8_t label() const { return _label; }
-    inline uint8_t * const ptrR() { return &_R[0][0]; }
-    inline uint8_t * const ptrG() { return &_G[0][0]; }
-    inline uint8_t * const ptrB() { return &_B[0][0]; }
-    inline const uint8_t * const ptrR() const { return &_R[0][0]; }
-    inline const uint8_t * const ptrG() const { return &_G[0][0]; }
-    inline const uint8_t * const ptrB() const { return &_B[0][0]; }
+    inline uint8_t * ptrR() { return &_R[0][0]; }
+    inline uint8_t * ptrG() { return &_G[0][0]; }
+    inline uint8_t * ptrB() { return &_B[0][0]; }
+    inline const uint8_t * ptrR() const { return &_R[0][0]; }
+    inline const uint8_t * ptrG() const { return &_G[0][0]; }
+    inline const uint8_t * ptrB() const { return &_B[0][0]; }
 
 private:
     uint8_t _label;

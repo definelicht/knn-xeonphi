@@ -37,9 +37,9 @@ public:
         double d = 0.0;
         for (int i = 0; i < 1024; ++i)
         {
-            d += (Ra[i] - Rb[i])*(Ra[i] - Rb[i]);
-            d += (Ga[i] - Gb[i])*(Ga[i] - Gb[i]);
-            d += (Ba[i] - Bb[i])*(Ba[i] - Bb[i]);
+            d += (static_cast<double>(Ra[i]) - static_cast<double>(Rb[i]))*(static_cast<double>(Ra[i]) - static_cast<double>(Rb[i]));
+            d += (static_cast<double>(Ga[i]) - static_cast<double>(Gb[i]))*(static_cast<double>(Ga[i]) - static_cast<double>(Gb[i]));
+            d += (static_cast<double>(Ba[i]) - static_cast<double>(Bb[i]))*(static_cast<double>(Ba[i]) - static_cast<double>(Bb[i]));
         }
         return d;
     }

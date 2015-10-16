@@ -25,30 +25,28 @@ int main(int argc, char** argv)
     /* vector<Flower> flowers = read_many_flowers(argv[2]); */
 
     // CIFAR images
-    /* vector<I8_32> testData(50000); */
-    /* { */
-    /*     vector<I8_32> testData1 = load_cifar_data(argv[2]); */
-    /*     vector<I8_32> testData2 = load_cifar_data(argv[3]); */
-    /*     vector<I8_32> testData3 = load_cifar_data(argv[4]); */
-    /*     vector<I8_32> testData4 = load_cifar_data(argv[5]); */
-    /*     vector<I8_32> testData5 = load_cifar_data(argv[6]); */
+    vector<I8_32> testData(50000);
+    {
+        vector<I8_32> testData1 = load_cifar_data(argv[2]);
+        vector<I8_32> testData2 = load_cifar_data(argv[3]);
+        vector<I8_32> testData3 = load_cifar_data(argv[4]);
+        vector<I8_32> testData4 = load_cifar_data(argv[5]);
+        vector<I8_32> testData5 = load_cifar_data(argv[6]);
 
-    /*     // concat */
-    /*     testData.insert(testData.end(), testData1.begin(), testData1.end()); */
-    /*     testData.insert(testData.end(), testData2.begin(), testData2.end()); */
-    /*     testData.insert(testData.end(), testData3.begin(), testData3.end()); */
-    /*     testData.insert(testData.end(), testData4.begin(), testData4.end()); */
-    /*     testData.insert(testData.end(), testData5.begin(), testData5.end()); */
-    /* } */
+        // concat
+        testData.insert(testData.end(), testData1.begin(), testData1.end());
+        testData.insert(testData.end(), testData2.begin(), testData2.end());
+        testData.insert(testData.end(), testData3.begin(), testData3.end());
+        testData.insert(testData.end(), testData4.begin(), testData4.end());
+        testData.insert(testData.end(), testData5.begin(), testData5.end());
+    }
     /* vector<I8_32> trainingData = load_cifar_data(argv[7]); */
-    /* vector<string> category = load_cifar_category10(argv[8]); */
+    vector<string> category = load_cifar_category10(argv[8]);
 
-    vector<I8_32> testData = load_cifar_data(argv[2]);
-    vector<I8_32> tr1 = load_cifar_data(argv[3]);
+    vector<I8_32> tr1 = load_cifar_data(argv[7]);
     vector<I8_32> trainingData;
     for (int i = 0; i < 10; ++i)
         trainingData.push_back(tr1[i]);
-    vector<string> category = load_cifar_category10(argv[4]);
 
     /* vector<Flower> trainingData; */
     /* vector<Flower> testData; */
@@ -73,7 +71,7 @@ int main(int argc, char** argv)
     /* vector<typename FlowerTag::TagType> c = knn.classify(k, trainingData); */
     myKNN<I8_32, CIFARTag, CIFARMetric> knn(testData);
     vector<typename CIFARTag::TagType> c = knn.classify(k, trainingData);
-    for (int i = 0; i < c.size(); ++i)
+    for (size_t i = 0; i < c.size(); ++i)
     {
         cout << category[c[i]] << endl;
         ostringstream name;
