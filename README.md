@@ -1,11 +1,12 @@
 Links
 -----
-[kNN-CUDA](https://github.com/vincentfpgarcia/kNN-CUDA) - GPU implementation.
+- [kNN-CUDA](https://github.com/vincentfpgarcia/kNN-CUDA) - GPU implementation.
 - [Handwritten digits](http://yann.lecun.com/exdb/mnist/) - Data set to test KNN implementation on.
 - [FLANN](http://www.cs.ubc.ca/research/flann/) - Fast nearest neighbor search library.
 - [ANN](https://www.cs.umd.edu/~mount/ANN/) - Approximate nearest neighbor search.
 - [80 million tiny images](http://people.csail.mit.edu/torralba/publications/80millionImages.pdf) - Large dataset used with NN algorithms (760GB).
 - [CIFAR](http://www.cs.toronto.edu/~kriz/cifar.html) - Smaller 32x32 image based dataset
+- [kNN Standard](http://web.stanford.edu/class/cs106l/handouts/assignment-3-kdtree.pdf) - kd-trees and KNN explained in simple English.
 
 Things to try
 -------------
