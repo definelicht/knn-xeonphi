@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 2.8)
 project(knn)
 
 find_package(Threads REQUIRED)
@@ -10,7 +10,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1z -O3")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Weffc++")
 
 set(KNN_SRC
-  LoadBinary.cc)
+  BinaryIO.cc)
 
 set(KNN_APPS_SRC)
 
@@ -19,13 +19,16 @@ set(KNN_TEST_SRC
 
 set(KNN_SRC_PATHS)
 foreach(SRC_FILE ${KNN_SRC})
-  set(KNN_SRC_PATHS ${KNN_SRC_PATHS} ${CMAKE_CURRENT_SOURCE_DIR}/src/${SRC_FILE})
+  set(KNN_SRC_PATHS ${KNN_SRC_PATHS}
+      ${CMAKE_CURRENT_SOURCE_DIR}/src/${SRC_FILE})
 endforeach()
 foreach(SRC_FILE ${KNN_APPS_SRC})
-  set(KNN_EXEC_PATHS ${KNN_EXEC_PATHS} ${CMAKE_CURRENT_SOURCE_DIR}/apps/${SRC_FILE})
+  set(KNN_EXEC_PATHS ${KNN_EXEC_PATHS}
+      ${CMAKE_CURRENT_SOURCE_DIR}/apps/${SRC_FILE})
 endforeach()
 foreach(SRC_FILE ${KNN_TEST_SRC})
-  set(KNN_EXEC_PATHS ${KNN_EXEC_PATHS} ${CMAKE_CURRENT_SOURCE_DIR}/tests/${SRC_FILE})
+  set(KNN_EXEC_PATHS ${KNN_EXEC_PATHS}
+      ${CMAKE_CURRENT_SOURCE_DIR}/tests/${SRC_FILE})
 endforeach()
 
 add_library(knn ${KNN_SRC_PATHS})
