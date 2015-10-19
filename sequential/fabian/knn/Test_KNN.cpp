@@ -4,92 +4,61 @@
 /* Tag:    Test myKNN */
 /* Copyright 2015 ETH Zurich. All Rights Reserved. */
 #include "myKNN.h"
-#include "Flower.h"
-#include "CIFAR.h"
+#include "myKDTree.h"
+#include "TestData.h"
 #include <vector>
-#include <string>
-#include <sstream>
 #include <cstdlib>
 #include <cstdio>
-#include <random>
+#include <utility>
 
 using namespace std;
 
 int main(int argc, char** argv)
 {
-    if (argc < 3)
+    if (argc < 2)
     {
-        printf("USAGE: %s <k> <path to data file> [more files]\n", argv[0]);
+        printf("USAGE: %s <k>\n", argv[0]);
         exit(-1);
     }
-    /* vector<Flower> flowers = read_many_flowers(argv[2]); */
-
-    // CIFAR images
-    vector<I8_32> testData(50000);
-    {
-        vector<I8_32> testData1 = load_cifar_data(argv[2]);
-        vector<I8_32> testData2 = load_cifar_data(argv[3]);
-        vector<I8_32> testData3 = load_cifar_data(argv[4]);
-        vector<I8_32> testData4 = load_cifar_data(argv[5]);
-        vector<I8_32> testData5 = load_cifar_data(argv[6]);
-
-        // concat
-        testData.insert(testData.end(), testData1.begin(), testData1.end());
-        testData.insert(testData.end(), testData2.begin(), testData2.end());
-        testData.insert(testData.end(), testData3.begin(), testData3.end());
-        testData.insert(testData.end(), testData4.begin(), testData4.end());
-        testData.insert(testData.end(), testData5.begin(), testData5.end());
-    }
-    /* vector<I8_32> trainingData = load_cifar_data(argv[7]); */
-    vector<string> category = load_cifar_category10(argv[8]);
-
-    vector<I8_32> tr1 = load_cifar_data(argv[7]);
-    vector<I8_32> trainingData;
-    for (int i = 0; i < 10; ++i)
-        trainingData.push_back(tr1[i]);
-
-    /* vector<Flower> trainingData; */
-    /* vector<Flower> testData; */
-    /* vector<size_t> imap; */
-
-    /* mt19937 generator; */
-    /* uniform_real_distribution<double> dist(0,1); */
-    /* for (size_t i = 0; i < flowers.size(); ++i) */
-    /* { */
-    /*     if (dist(generator) < 0.33) */
-    /*     { */
-    /*         trainingData.push_back(flowers[i]); */
-    /*         imap.push_back(i); */
-    /*     } */
-    /*     else */
-    /*         testData.push_back(flowers[i]); */
-    /* } */
 
     // KNN
     const size_t k = atoi(argv[1]);
-    /* myKNN<Flower, FlowerTag, FlowerMetric> knn(testData); */
-    /* vector<typename FlowerTag::TagType> c = knn.classify(k, trainingData); */
-    myKNN<I8_32, CIFARTag, CIFARMetric> knn(testData);
-    vector<typename CIFARTag::TagType> c = knn.classify(k, trainingData);
+    vector<TestData> data({
+            {-2,-2,"lower-left"},
+            {-2,-1,"lower-left"},
+            {-1,-2,"lower-left"},
+            {-1,-1,"lower-left"},
+            {-2, 2,"upper-left"},
+            {-2, 1,"upper-left"},
+            {-1, 2,"upper-left"},
+            {-1, 1,"upper-left"},
+            {2,-2,"lower-right"},
+            {2,-1,"lower-right"},
+            {1,-2,"lower-right"},
+            {1,-1,"lower-right"},
+            {2, 2,"upper-right"},
+            {2, 1,"upper-right"},
+            {1, 2,"upper-right"},
+            {1, 1,"upper-right"}});
+
+    vector<TestData> test({
+            {-0.4,-1.3,"lower-left"},
+            {-3,2.4,"upper-left"},
+            {1.2,-0.1,"lower-right"},
+            {4.5,1.6,"upper-right"}});
+
+    myKNN<TestData, myKDTree<TestData> > knn(std::move(data), TestData::Dim);
+    vector<typename TestData::TagType> c = knn.classify(k, test);
+
+    // check quality of estimate
+    size_t count = 0;
     for (size_t i = 0; i < c.size(); ++i)
     {
-        cout << category[c[i]] << endl;
-        ostringstream name;
-        name << "training_" << i << ".jpg";
-        trainingData[i].print(name.str());
+        printf("Predicted = %s, Actual = %s\n", c[i].c_str(), test[i].tag().c_str());
+        if (c[i] == test[i].tag()) ++count;
     }
-
-
-
-    /* // check quality of estimate */
-    /* size_t count = 0; */
-    /* for (size_t i = 0; i < c.size(); ++i) */
-    /* { */
-    /*     printf("Predicted = %s, Actual = %s\n", c[i].c_str(), flowers[imap[i]].tag().c_str()); */
-    /*     if (c[i] == flowers[imap[i]].tag()) ++count; */
-    /* } */
-    /* const double accuracy = static_cast<double>(count)/static_cast<double>(c.size()) * 100.0; */
-    /* printf("Accuracy is %.2f%%\n", accuracy); */
+    const double accuracy = static_cast<double>(count)/static_cast<double>(c.size()) * 100.0;
+    printf("Accuracy is %.2f%%\n", accuracy);
 
     return 0;
 }

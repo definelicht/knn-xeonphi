@@ -13,7 +13,11 @@
 #include <cstdint>
 #include "Image_8bit.h"
 
-typedef Image_8bit<32> I8_32;
+using I8_32 = Image_8bit<32>;
+
+class CIFARData
+{
+};
 
 class CIFARTag
 {
@@ -28,19 +32,12 @@ public:
     typedef double MetricType;
     double operator()(const I8_32& a, const I8_32& b) const
     {
-        const uint8_t * const Ra = a.ptrR();
-        const uint8_t * const Ga = a.ptrG();
-        const uint8_t * const Ba = a.ptrB();
-        const uint8_t * const Rb = b.ptrR();
-        const uint8_t * const Gb = b.ptrG();
-        const uint8_t * const Bb = b.ptrB();
+        const uint8_t * const pa = a.ptr();
+        const uint8_t * const pb = b.ptr();
         double d = 0.0;
-        for (int i = 0; i < 1024; ++i)
-        {
-            d += (static_cast<double>(Ra[i]) - static_cast<double>(Rb[i]))*(static_cast<double>(Ra[i]) - static_cast<double>(Rb[i]));
-            d += (static_cast<double>(Ga[i]) - static_cast<double>(Gb[i]))*(static_cast<double>(Ga[i]) - static_cast<double>(Gb[i]));
-            d += (static_cast<double>(Ba[i]) - static_cast<double>(Bb[i]))*(static_cast<double>(Ba[i]) - static_cast<double>(Bb[i]));
-        }
+        for (size_t i = 0; i < I8_32::Dim; ++i)
+            d += (static_cast<double>(pa[i]) - static_cast<double>(pb[i]))*(static_cast<double>(pa[i]) - static_cast<double>(pb[i]));
+
         return d;
     }
 };
@@ -56,7 +53,7 @@ std::vector<I8_32> load_cifar_data(const std::string& filename)
     for (int i = 0; i < 10000; ++i)
     {
         data.read((char*)&buffer[0], chunk);
-        ret[i].put(buffer[0], &buffer[1], &buffer[1+1024], &buffer[1+2*1024]);
+        ret[i].put(buffer);
     }
     data.close();
 
