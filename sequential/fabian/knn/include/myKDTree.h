@@ -84,7 +84,7 @@ typename myKDTree<TData>::NodeType* myKDTree<TData>::_buildTree(_indexIterator_t
         NodeType* me = &(*_tree.emplace(_tree.end()));
         me->set(parent,nullptr,nullptr,&_dataSet[*anchor],curr_dim);
 
-        curr_dim = curr_dim % _dataDim;
+        curr_dim = (++curr_dim) % _dataDim;
         me->child_l = _buildTree(start, anchor, curr_dim, me);
         me->child_r = _buildTree(anchor+1, end, curr_dim, me);
         return me;
