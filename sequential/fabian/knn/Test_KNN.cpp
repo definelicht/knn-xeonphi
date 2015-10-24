@@ -47,8 +47,9 @@ int main(int argc, char** argv)
             {1.2,-0.1,"lower-right"},
             {4.5,1.6,"upper-right"}});
 
-    myKNN<TestData, myKDTree<TestData> > knn(std::move(data), TestData::Dim);
-    vector<typename TestData::TagType> c = knn.classify(k, test);
+    myKNN<TestData> knn(std::move(data), TestData::Dim);
+    /* vector<typename TestData::TagType> c = knn.classify(k, test); */
+    vector<typename TestData::TagType> c = knn.classifyUsingTree(k, test);
 
     // check quality of estimate
     size_t count = 0;

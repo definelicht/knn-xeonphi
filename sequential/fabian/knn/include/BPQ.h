@@ -36,7 +36,7 @@ public:
         _iMax = std::distance(_priority.cbegin(), std::max_element(_priority.cbegin(), _priority.cend()));
     }
 
-    std::vector<const T*> getValues()
+    std::vector<const T*> getValues() const
     {
         std::vector<size_t> sortedIdx(_priority.size());
         std::iota(sortedIdx.begin(), sortedIdx.end(), 0);
