@@ -3,98 +3,126 @@
 #include <algorithm>  // std::sort
 #include <functional> // std::function
 #include <numeric>    // std::iota
+#include <iostream>
 #include <ostream>
-#include <stdexcept>  // std::invalid_argument
+#include <stdexcept> // std::invalid_argument
 #include <string>
+#include <unordered_map>
 #include <vector>
 
-template <typename DataType, typename LabelType> class KDTree {
+template <size_t Dim, typename DataType, typename LabelType> class KDTree {
+
+public:
+  using DataContainer = std::vector<DataType>;
+  using LabelContainer = std::vector<LabelType>;
+  using DataItr = typename DataContainer::const_iterator;
+  using LabelItr = typename LabelContainer::const_iterator;
 
 private:
   struct Node {
-    using TreeIterator_t = typename std::vector<Node>::const_iterator;
-    std::vector<DataType> value;
-    LabelType label;
-    size_t dim;
-    TreeIterator_t parent, left, right;
-    Node(std::vector<DataType> &&_value, LabelType const &_label, size_t _dim,
-         TreeIterator_t const &_parent, TreeIterator_t const &_end);
+    const DataItr value;
+    const LabelItr label;
+    const size_t splitDim;
+    typename std::vector<Node>::const_iterator parent, left, right;
+    Node(DataItr const &_value, LabelItr const &_label, size_t _splitDim,
+         typename std::vector<Node>::const_iterator const &_parent,
+         typename std::vector<Node>::const_iterator const &_end);
   };
+  using TreeItr = typename std::vector<Node>::const_iterator;
 
 public:
-  using Point_t = std::vector<DataType>;
-  using Dim_t = std::vector<DataType>;
-
-  class Ptr {
+  class NodeItr {
   public:
-    Ptr(typename Node::TreeIterator_t const &node,
-        typename Node::TreeIterator_t const &end);
-    Ptr Left() const;
-    Ptr Right() const;
-    Ptr Parent() const;
+    NodeItr(TreeItr const &node, TreeItr const &end);
+    NodeItr Left() const;
+    NodeItr Right() const;
+    NodeItr Parent() const;
     bool TryLeft();
     bool TryRight();
     bool TryParent();
     bool inBounds() const;
-    Point_t const& value() const;
-    LabelType const& label() const;
-    size_t dim() const;
+    DataItr value() const;
+    LabelItr label() const;
+    size_t splitDim() const;
+
   private:
-    typename Node::TreeIterator_t node_;
-    const typename Node::TreeIterator_t end_;
+    TreeItr node_;
+    const TreeItr end_;
   };
 
   KDTree();
 
-  KDTree(std::vector<Dim_t> const &points,
-         std::vector<LabelType> const &labels);
+  KDTree(DataContainer const &points, LabelContainer const &labels);
 
-  KDTree(KDTree<DataType, LabelType> const &other) = default;
+  KDTree(KDTree<Dim, DataType, LabelType> const &other) = default;
 
-  KDTree(KDTree<DataType, LabelType> &&other) = default;
+  KDTree(KDTree<Dim, DataType, LabelType> &&other) = default;
 
-  KDTree<DataType, LabelType> &
-  operator=(KDTree<DataType, LabelType> const &rhs) = default;
+  KDTree<Dim, DataType, LabelType> &
+  operator=(KDTree<Dim, DataType, LabelType> const &rhs) = default;
 
-  KDTree<DataType, LabelType> &
-  operator=(KDTree<DataType, LabelType> &&rhs) = default;
+  KDTree<Dim, DataType, LabelType> &
+  operator=(KDTree<Dim, DataType, LabelType> &&rhs) = default;
 
   size_t size() const;
 
-  size_t nDims() const;
+  constexpr size_t nDims() const;
 
-  Ptr Root() const;
+  NodeItr Root() const;
+
+  template <typename DistType>
+  LabelType Knn(int k, DataItr const &point,
+                std::function<DistType(DataItr const &, DataItr const &)> const
+                    &distFunc) const;
 
 private:
-  typename std::vector<Node>::const_iterator BuildTree(
-      std::vector<Dim_t> const &points, std::vector<LabelType> const &labels,
-      std::vector<size_t>::iterator begin, std::vector<size_t>::iterator end,
-      size_t dim, typename Node::TreeIterator_t const &parent);
+  TreeItr
+  BuildTree(DataContainer const &data, LabelContainer const &labels,
+            std::vector<size_t>::iterator begin,
+            std::vector<size_t>::iterator end, size_t dim,
+            TreeItr const &parent);
 
-  size_t nDims_, size_;
+  template <typename DistType>
+  void KnnRecurse(
+      size_t k, DataItr const &point,
+      std::function<DistType(DataItr const &, DataItr const &)> const &distFunc,
+      NodeItr const &node, std::vector<DistType> &bestDistances,
+      std::vector<int> &labels, size_t &maxDist) const;
+
+  size_t size_;
   std::vector<Node> tree_{};
+  std::unordered_map<int, LabelType> labelMapping_{};
+  std::unordered_map<LabelType, int> labelMappingInv_{};
 };
 
-template <typename DataType, typename LabelType>
-KDTree<DataType, LabelType>::KDTree() : nDims_(0), size_(0) {}
+template <size_t Dim, typename DataType, typename LabelType>
+KDTree<Dim, DataType, LabelType>::KDTree()
+    : size_(0) {}
 
-template <typename DataType, typename LabelType>
-KDTree<DataType, LabelType>::KDTree(std::vector<Dim_t> const &points,
-                                    std::vector<LabelType> const &labels)
-    : nDims_(points.size()), size_(nDims_ > 0 ? points[0].size() : 0) {
-  if (nDims_ == 0) {
-    throw std::invalid_argument("KDTree received zero-dimensional data.");
-  }
+template <size_t Dim, typename DataType, typename LabelType>
+KDTree<Dim, DataType, LabelType>::KDTree(DataContainer const &points,
+                                         LabelContainer const &labels)
+    : size_(Dim > 0 ? points.size() / Dim : 0) {
+  static_assert(Dim > 0, "KDTree data cannot be zero-dimensional.");
   if (size_ == 0) {
     throw std::invalid_argument("KDTree received empty data set.");
+  }
+  if (points.size() % Dim != 0) {
+    throw std::invalid_argument("KDTree received unbalanced data.");
   }
   if (labels.size() != size_) {
     throw std::invalid_argument(
         "KDTree received mismatched point and label size.");
   }
-  for (auto &nDims_ : points) {
-    if (nDims_.size() != size_) {
-      throw std::invalid_argument("KDTree data has inconsistent length.");
+  int index = 0;
+  std::vector<int> labelsInt;
+  labelsInt.reserve(labels.size());
+  for (int i = 0, iEnd = labels.size(); i < iEnd; ++i) {
+    auto insertion = labelMappingInv_.emplace(std::make_pair(labels[i], index));
+    labelsInt.emplace_back(insertion.first->second);
+    if (insertion.second == true) {
+      labelMapping_.emplace(std::make_pair(index, labels[i]));
+      ++index;
     }
   }
   tree_.reserve(size_);
@@ -104,39 +132,40 @@ KDTree<DataType, LabelType>::KDTree(std::vector<Dim_t> const &points,
             tree_.cbegin() + size_);
 }
 
-template <typename DataType, typename LabelType>
-KDTree<DataType, LabelType>::Node::Node(std::vector<DataType> &&_value,
-                                        LabelType const &_label, size_t _dim,
-                                        TreeIterator_t const &_parent,
-                                        TreeIterator_t const &_end)
-    : value(_value), label(_label), dim(_dim), parent(_parent), left(_end),
-      right(_end) {}
+template <size_t Dim, typename DataType, typename LabelType>
+KDTree<Dim, DataType, LabelType>::Node::Node(DataItr const &_value,
+                                             LabelItr const &_label,
+                                             const size_t _splitDim,
+                                             TreeItr const &_parent,
+                                             TreeItr const &_end)
+    : value(_value), label(_label), splitDim(_splitDim), parent(_parent),
+      left(_end), right(_end) {}
 
-template <typename DataType, typename LabelType>
-KDTree<DataType, LabelType>::Ptr::Ptr(typename Node::TreeIterator_t const &node,
-                                      typename Node::TreeIterator_t const &end)
+template <size_t Dim, typename DataType, typename LabelType>
+KDTree<Dim, DataType, LabelType>::NodeItr::NodeItr(TreeItr const &node,
+                                                   TreeItr const &end)
     : node_(node), end_(end) {}
 
-template <typename DataType, typename LabelType>
-typename KDTree<DataType, LabelType>::Ptr
-KDTree<DataType, LabelType>::Ptr::Left() const {
+template <size_t Dim, typename DataType, typename LabelType>
+typename KDTree<Dim, DataType, LabelType>::NodeItr
+KDTree<Dim, DataType, LabelType>::NodeItr::Left() const {
   return {node_->left, end_};
 }
 
-template <typename DataType, typename LabelType>
-typename KDTree<DataType, LabelType>::Ptr
-KDTree<DataType, LabelType>::Ptr::Right() const {
+template <size_t Dim, typename DataType, typename LabelType>
+typename KDTree<Dim, DataType, LabelType>::NodeItr
+KDTree<Dim, DataType, LabelType>::NodeItr::Right() const {
   return {node_->right, end_};
 }
 
-template <typename DataType, typename LabelType>
-typename KDTree<DataType, LabelType>::Ptr
-KDTree<DataType, LabelType>::Ptr::Parent() const {
+template <size_t Dim, typename DataType, typename LabelType>
+typename KDTree<Dim, DataType, LabelType>::NodeItr
+KDTree<Dim, DataType, LabelType>::NodeItr::Parent() const {
   return {node_->parent, end_};
 }
 
-template <typename DataType, typename LabelType>
-bool KDTree<DataType, LabelType>::Ptr::TryLeft() {
+template <size_t Dim, typename DataType, typename LabelType>
+bool KDTree<Dim, DataType, LabelType>::NodeItr::TryLeft() {
   if (node_->left != end_) {
     node_ = node_->left;
     return true;
@@ -144,8 +173,8 @@ bool KDTree<DataType, LabelType>::Ptr::TryLeft() {
   return false;
 }
 
-template <typename DataType, typename LabelType>
-bool KDTree<DataType, LabelType>::Ptr::TryRight() {
+template <size_t Dim, typename DataType, typename LabelType>
+bool KDTree<Dim, DataType, LabelType>::NodeItr::TryRight() {
   if (node_->right != end_) {
     node_ = node_->right;
     return true;
@@ -153,8 +182,8 @@ bool KDTree<DataType, LabelType>::Ptr::TryRight() {
   return false;
 }
 
-template <typename DataType, typename LabelType>
-bool KDTree<DataType, LabelType>::Ptr::TryParent() {
+template <size_t Dim, typename DataType, typename LabelType>
+bool KDTree<Dim, DataType, LabelType>::NodeItr::TryParent() {
   if (node_->parent != end_) {
     node_ = node_->parent;
     return true;
@@ -162,86 +191,168 @@ bool KDTree<DataType, LabelType>::Ptr::TryParent() {
   return false;
 }
 
-template <typename DataType, typename LabelType>
-bool KDTree<DataType, LabelType>::Ptr::inBounds() const {
+template <size_t Dim, typename DataType, typename LabelType>
+bool KDTree<Dim, DataType, LabelType>::NodeItr::inBounds() const {
   return node_ != end_;
 }
 
-template <typename DataType, typename LabelType>
-typename KDTree<DataType, LabelType>::Point_t const &
-KDTree<DataType, LabelType>::Ptr::value() const {
+template <size_t Dim, typename DataType, typename LabelType>
+typename KDTree<Dim, DataType, LabelType>::DataItr
+KDTree<Dim, DataType, LabelType>::NodeItr::value() const {
   return node_->value;
 }
 
-template <typename DataType, typename LabelType>
-LabelType const &KDTree<DataType, LabelType>::Ptr::label() const {
+template <size_t Dim, typename DataType, typename LabelType>
+typename KDTree<Dim, DataType, LabelType>::LabelItr
+KDTree<Dim, DataType, LabelType>::NodeItr::label() const {
   return node_->label;
 }
 
-template <typename DataType, typename LabelType>
-size_t KDTree<DataType, LabelType>::Ptr::dim() const {
-  return node_->dim;
+template <size_t Dim, typename DataType, typename LabelType>
+size_t KDTree<Dim, DataType, LabelType>::NodeItr::splitDim() const {
+  return node_->splitDim;
 }
 
-template <typename DataType, typename LabelType>
-typename KDTree<DataType, LabelType>::Ptr
-KDTree<DataType, LabelType>::Root() const {
+template <size_t Dim, typename DataType, typename LabelType>
+typename KDTree<Dim, DataType, LabelType>::NodeItr
+KDTree<Dim, DataType, LabelType>::Root() const {
   return {tree_.cbegin(), tree_.cend()};
 }
 
-template <typename DataType, typename LabelType>
-size_t KDTree<DataType, LabelType>::size() const {
+template <size_t Dim, typename DataType, typename LabelType>
+size_t KDTree<Dim, DataType, LabelType>::size() const {
   return size_;
 }
 
-template <typename DataType, typename LabelType>
-size_t KDTree<DataType, LabelType>::nDims() const {
-  return nDims_;
+template <size_t Dim, typename DataType, typename LabelType>
+constexpr size_t KDTree<Dim, DataType, LabelType>::nDims() const {
+  return Dim;
 }
 
-template <typename DataType, typename LabelType>
-typename std::vector<typename KDTree<DataType, LabelType>::Node>::const_iterator
-KDTree<DataType, LabelType>::BuildTree(
-    std::vector<Dim_t> const &points, std::vector<LabelType> const &labels,
-    std::vector<size_t>::iterator begin, std::vector<size_t>::iterator end,
-    size_t dim, typename Node::TreeIterator_t const &parent) {
+template <size_t Dim, typename DataType, typename LabelType>
+typename KDTree<Dim, DataType, LabelType>::TreeItr
+KDTree<Dim, DataType, LabelType>::BuildTree(DataContainer const &points,
+                                            LabelContainer const &labels,
+                                            std::vector<size_t>::iterator begin,
+                                            std::vector<size_t>::iterator end,
+                                            size_t splitDim,
+                                            TreeItr const &parent) {
   if (begin >= end) {
     return tree_.cbegin() + size_;
   }
-  std::sort(begin, end, [dim, &points](size_t a, size_t b) {
-    return points[dim][a] < points[dim][b];
+  const size_t middle = std::distance(begin, end)/2;
+  std::nth_element(begin, begin + middle, end, [&points, splitDim](size_t a,
+                                                                   size_t b) {
+    return points[Dim * a + splitDim] < points[Dim * b + splitDim];
   });
-  std::vector<size_t>::iterator median =
-      begin + (std::distance(begin, end) >> 1);
-  auto treeItr_ = tree_.end();
-  {
-    std::vector<DataType> pivot(nDims_);
-    for (size_t d = 0, dEnd = nDims_; d < dEnd; ++d) {
-      pivot[d] = points[d][*median];
-    }
-    tree_.emplace_back(std::move(pivot), labels[*median], dim,
-                       parent, tree_.cbegin() + size_);
+  const size_t medianIndex = begin[middle];
+  auto treeItr = tree_.end();
+  tree_.emplace_back(points.cbegin() + Dim * medianIndex,
+                     labels.cbegin() + medianIndex, splitDim, parent,
+                     tree_.cbegin() + size_);
+  if (++splitDim == Dim) { 
+    splitDim = 0;
   }
-  if (++dim == points.size()) dim = 0;
-  treeItr_->left = BuildTree(points, labels, begin, median, dim, treeItr_);
-  treeItr_->right = BuildTree(points, labels, median + 1, end, dim, treeItr_);
-  return treeItr_;
+  treeItr->left =
+      BuildTree(points, labels, begin, begin + middle, splitDim, treeItr);
+  treeItr->right =
+      BuildTree(points, labels, begin + middle + 1, end, splitDim, treeItr);
+  return treeItr;
 }
 
-template <typename DataType, typename LabelType>
+template <size_t Dim, typename DataType, typename LabelType>
+template <typename DistType>
+void KDTree<Dim, DataType, LabelType>::KnnRecurse(
+    const size_t k, DataItr const &point,
+    std::function<DistType(DataItr const &, DataItr const &)> const &distFunc,
+    NodeItr const &node, std::vector<DistType> &bestDistances,
+    std::vector<int> &labels, size_t &maxDist) const {
+
+  const DistType thisDist = distFunc(point, node.value());
+
+  // If current distance is better than the current longest current candidate,
+  // replace the previous candidate with the new one
+  if (bestDistances.size() == k) {
+    if (thisDist < bestDistances[maxDist]) {
+      bestDistances[maxDist] = thisDist;
+      labels[maxDist] = labelMappingInv_.find(*node.label())->second;
+      auto distBegin = bestDistances.cbegin();
+      maxDist = std::distance(
+          distBegin, std::max_element(distBegin, bestDistances.cend()));
+    }
+  } else {
+    bestDistances.emplace_back(thisDist);
+    labels.emplace_back(labelMappingInv_.find(*node.label())->second);
+    auto distBegin = bestDistances.cbegin();
+    maxDist = std::distance(distBegin,
+                            std::max_element(distBegin, bestDistances.cend()));
+  }
+
+  auto traverseSubtree = [&](bool doLeft) {
+    if (doLeft) {
+      const auto left = node.Left();
+      if (left.inBounds()) {
+        KnnRecurse(k, point, distFunc, left, bestDistances, labels, maxDist); 
+      }
+    } else {
+      const auto right = node.Right();
+      if (right.inBounds()) {
+        KnnRecurse(k, point, distFunc, right, bestDistances, labels, maxDist);
+      }
+    }
+  };
+
+  // Recurse the subtree with the highest intersection
+  const size_t splitDim = node.splitDim();
+  const bool doLeft = point[splitDim] < node.value()[splitDim];
+  traverseSubtree(doLeft);
+
+  // If the longest nearest neighbor hypersphere crosses the splitting
+  // hyperplane after traversing the subtree with the highest intersection, we
+  if (std::abs(node.value()[splitDim] - point[splitDim]) <
+      bestDistances[maxDist] || bestDistances.size() < k) {
+    traverseSubtree(!doLeft);
+  }
+}
+
+template <size_t Dim, typename DataType, typename LabelType>
+template <typename DistType>
+LabelType KDTree<Dim, DataType, LabelType>::Knn(
+    const int k, DataItr const &point,
+    std::function<DistType(DataItr const &, DataItr const &)> const &distFunc)
+    const {
+  std::vector<DistType> bestDistances;
+  std::vector<int> labels;
+  size_t maxDist = 0;
+  KnnRecurse<DistType>(k, point, distFunc, Root(), bestDistances, labels,
+                       maxDist);
+  std::vector<int> vote(labelMapping_.size(), 0);
+  LabelType label{};
+  int highest = -1;
+  for (int l : labels) {
+    if (++vote[l] > highest) {
+      highest = vote[l];
+      label = labelMapping_.find(l)->second;
+    }
+  }
+  return label;
+}
+
+template <size_t Dim, typename DataType, typename LabelType>
 std::ostream &operator<<(std::ostream &os,
-                         KDTree<DataType, LabelType> const &tree) {
-  std::function<void(typename KDTree<DataType, LabelType>::Ptr,
+                         KDTree<Dim, DataType, LabelType> const &tree) {
+  std::function<void(typename KDTree<Dim, DataType, LabelType>::NodeItr,
                      std::string indent)> printRecursive = [&os,
                                                             &printRecursive](
-      typename KDTree<DataType, LabelType>::Ptr root, std::string indent) {
+      typename KDTree<Dim, DataType, LabelType>::NodeItr root,
+      std::string indent) {
     indent += "  ";
-    auto &val = root.value();
-    os << indent << "(" << val[0];
-    for (int i = 1, iEnd = val.size(); i < iEnd; ++i) {
-      os << ", " << val[i];
+    auto val = root.value();
+    os << indent << "(" << (*val);
+    for (size_t i = 1; i < Dim; ++i) {
+      os << ", " << (*(val+i));
     }
-    os << ") -> " << root.label() << "\n";
+    os << ") -> " << (*root.label()) << "\n";
     auto left = root.Left();
     if (left.inBounds()) {
       os << indent << "Left:\n";
