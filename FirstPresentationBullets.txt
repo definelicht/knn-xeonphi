@@ -1,0 +1,28 @@
+1. Introduction to problem
+  - KNN
+  - KD-trees (animation?)
+  - Mention of approximation and randomized variation used in practice
+2. Introduction to FLANN
+  - Current state of the art: delegates to different algorithms.
+  - Why is it state of the art? (used in OpenCV)
+  - Show FLANN results
+  - Specify subdomain: randomized kd-tree, higher accuracy
+  - Mention bruteforce GPU algorithm
+3. Current results:
+  - Bruteforce algorithm
+  - Working kd-tree
+  - (Working approximation/randomized?)
+4. Xeon Phi:
+  - Memory management/caches
+  - Parallization schemes:
+    - One copy of tree
+    - Multiple copies of tree (n cores per n randomized trees)
+    - Tree on each core (only for small datasets)
+    - Bruteforce using matrix library
+  - MPI for communication
+5. Milestones
+  - Bruteforce [DONE]
+  - kd-tree [DONE]
+  - Randomized approximate kd-trees on CPU [MAYBE DONE] 
+  - Parallelize using MPI
+  - Tuning to Xeon Phi
