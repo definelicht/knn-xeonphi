@@ -12,7 +12,6 @@ Things to try
 -------------
 - Distance computations using a matrix library, since this is essentially matrix operations and can be trivially sped up.
 - Vary parameters deciding how many comparisons per level vs. depth.
-- Split on highest variance vs. split on median
 
 Influences on performance from data
 -----------------------------------
