@@ -17,30 +17,44 @@ using I8_32 = Image_8bit<32>;
 
 class CIFARData
 {
-};
-
-class CIFARTag
-{
 public:
+    typedef uint8_t DataType;
+    typedef int ArithmeticType;
     typedef uint8_t TagType;
-    inline uint8_t operator()(const I8_32& img) const { return img.label(); }
-};
-
-class CIFARMetric
-{
-public:
     typedef double MetricType;
-    double operator()(const I8_32& a, const I8_32& b) const
+    static const size_t Dim = I8_32::Dim;
+
+    CIFARData() : _data() {}
+    CIFARData(const I8_32& img) : _data(img) {}
+    CIFARData(const CIFARData& c) : _data(c._data) {}
+    CIFARData& operator=(const CIFARData& c)
     {
-        const uint8_t * const pa = a.ptr();
-        const uint8_t * const pb = b.ptr();
-        double d = 0.0;
+        if (this != &c)
+            _data = c._data;
+        return *this;
+    }
+
+    DataType& operator[](const size_t i) { return _data[i]; }
+    DataType operator[](const size_t i) const { return _data[i]; }
+
+    static inline TagType tagKernel(const CIFARData& c) { return c._data.label(); }
+    static inline MetricType metricKernel(const CIFARData& a, const CIFARData& b)
+    {
+        const DataType * const pa = a._data.ptr();
+        const DataType * const pb = b._data.ptr();
+        MetricType d = 0.0;
         for (size_t i = 0; i < I8_32::Dim; ++i)
-            d += (static_cast<double>(pa[i]) - static_cast<double>(pb[i]))*(static_cast<double>(pa[i]) - static_cast<double>(pb[i]));
+            d += (static_cast<MetricType>(pa[i]) - static_cast<MetricType>(pb[i]))*(static_cast<MetricType>(pa[i]) - static_cast<MetricType>(pb[i]));
 
         return d;
     }
+
+    inline void dumpImage(const std::string& fname) const { _data.print(fname); }
+
+private:
+    I8_32 _data;
 };
+
 
 std::vector<I8_32> load_cifar_data(const std::string& filename)
 {

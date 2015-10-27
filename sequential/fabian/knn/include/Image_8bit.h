@@ -42,7 +42,7 @@ public:
 
     static const size_t Dim = 3*N*N;
 
-    void print(const std::string filename) const
+    void print(const std::string& filename) const
     {
         std::vector<pixel> img(N*N);
         for (int i = 0; i < N*N; ++i)

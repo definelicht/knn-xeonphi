@@ -10,26 +10,28 @@
 
 class TestData
 {
-    double _a, _b;
-    std::string _tag;
-
 public:
-    TestData() : _a(0), _b(0), _tag("none") {}
-    TestData(const double a, const double b, const std::string tag) : _a(a), _b(b), _tag(tag) {}
-
     using DataType = double;
+    using ArithmeticType = double;
     using MetricType = double;
     using TagType = std::string;
     static const size_t Dim = 2;
 
-    double& operator[](const size_t i) { return (i==0) ? _a : _b; }
-    double operator[](const size_t i) const { return (i==0) ? _a : _b; }
+    TestData() : _a(0), _b(0), _tag("none") {}
+    TestData(const DataType a, const DataType b, const TagType tag) : _a(a), _b(b), _tag(tag) {}
+
+    DataType& operator[](const size_t i) { return (i==0) ? _a : _b; }
+    DataType operator[](const size_t i) const { return (i==0) ? _a : _b; }
 
     static inline MetricType metricKernel(const TestData& a, const TestData& b) { return a.compare(b); }
     static inline TagType tagKernel(const TestData& c) { return c.tag(); }
 
-    inline double compare(const TestData& rhs) const { return (_a-rhs._a)*(_a-rhs._a) + (_b-rhs._b)*(_b-rhs._b); }
-    inline std::string tag() const { return _tag; };
+    inline MetricType compare(const TestData& rhs) const { return (_a-rhs._a)*(_a-rhs._a) + (_b-rhs._b)*(_b-rhs._b); }
+    inline TagType tag() const { return _tag; };
+
+private:
+    DataType _a, _b;
+    TagType _tag;
 };
 
 #endif /* TESTDATA_H_90MLSRGI */
