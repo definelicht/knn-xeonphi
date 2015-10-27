@@ -118,8 +118,8 @@ void myKNN<TData>::_recursiveTreeKNN(const TData& Q, const typename myKDTree<TDa
     typename myKDTree<TData>::NodeType* other;
 
     // search branch determined by currDim
-    const typename TData::DataType currDiff = Q[currDim] - (*node->data)[currDim];
-    if (currDim < 0)
+    const typename TData::ArithmeticType currDiff = static_cast<typename TData::ArithmeticType>(Q[currDim]) - static_cast<typename TData::ArithmeticType>((*node->data)[currDim]);
+    if (currDiff < 0)
     {
         other = node->child_r;
         _recursiveTreeKNN(Q, node->child_l, bpq);
