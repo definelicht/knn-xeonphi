@@ -19,7 +19,10 @@
 #include "BPQ.h"
 #include "myKDTree.h"
 
+/* TODO: (fabianw; Tue Oct 27 22:39:56 2015) this is not general! Might fail
+ * with exotic ArithmeticType's. Fix this! */
 template <typename X> X myabs(X x) { abort(); return x; }
+template <> int myabs(int x)   { return std::fabs(x); }
 template <> float myabs(float x)   { return std::fabs(x); }
 template <> double myabs(double x) { return std::abs(x); }
 
@@ -118,6 +121,11 @@ void myKNN<TData>::_recursiveTreeKNN(const TData& Q, const typename myKDTree<TDa
     typename myKDTree<TData>::NodeType* other;
 
     // search branch determined by currDim
+    /* TODO: (fabianw; Tue Oct 27 22:41:27 2015) need to cast to an appropriate
+     * ArithmeticType depending on the data.  Is this efficient? Probably not.
+     * This caused problems when doing arithmetic with e.g. unsigned uint8_t
+     * used for the image class.  Plus you need an appropriate myabs() function
+     * below for the corresponding ArithmeticType. This is buggy. */
     const typename TData::ArithmeticType currDiff = static_cast<typename TData::ArithmeticType>(Q[currDim]) - static_cast<typename TData::ArithmeticType>((*node->data)[currDim]);
     if (currDiff < 0)
     {
