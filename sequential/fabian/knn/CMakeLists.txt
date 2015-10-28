@@ -1,10 +1,12 @@
-cmake_minimum_required(VERSION 3.0)
+#cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 2.8)
 project(myTest)
 
 find_package(OpenMP)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 include_directories(/usr/include/malloc)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -O3 -Wall -Wextra -Weffc++ ${OpenMP_CXX_FLAGS}")
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -O3 -Wall -Wextra -Weffc++ ${OpenMP_CXX_FLAGS}")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -O3 -Wall -Wextra -Weffc++ ${OpenMP_CXX_FLAGS}")
 
 set(KNN_SRC
     jpge.cpp)
