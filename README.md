@@ -4,6 +4,7 @@ Links
 - [FLANN](http://www.cs.ubc.ca/research/flann/) - Fast nearest neighbor search library.
 - [ANN](https://www.cs.umd.edu/~mount/ANN/) - Approximate nearest neighbor search.
 - [kNN Standard](http://web.stanford.edu/class/cs106l/handouts/assignment-3-kdtree.pdf) - kd-trees and KNN explained in simple English.
+- [More on KNN/KD-tree theory](http://www.cl.cam.ac.uk/techreports/UCAM-CL-TR-209.pdf) - Efficient memory-based learning for robot control
 
 Data Sets
 ---------
