@@ -33,7 +33,9 @@ public:
     myKNN(std::vector<TData>&& test_data, const size_t data_dim) : myKDTree<TData>(std::move(test_data), data_dim) { }
 
     std::vector<typename TData::TagType> classify(const size_t k, const std::vector<TData>& trainingSet) const;
-    inline std::vector<typename TData::TagType> classifyUsingTree(const size_t k, const std::vector<TData>& trainingSet) const;
+    std::vector<typename TData::TagType> classifyUsingTree(const size_t k, const std::vector<TData>& trainingSet) const;
+    std::vector<TData> findKNN(const size_t k, const std::vector<TData>& trainingSet) const;
+    std::vector<TData> findKNNUsingTree(const size_t k, const std::vector<TData>& trainingSet) const;
 
 private:
     typename TData::TagType _vote(const BPQ<TData>& bpq) const;
@@ -83,6 +85,55 @@ std::vector<typename TData::TagType> myKNN<TData>::classifyUsingTree(const size_
         bestGuess[i] = _vote(bpq);
     }
     return bestGuess;
+}
+
+
+template <typename TData>
+std::vector<TData> myKNN<TData>::findKNN(const size_t k, const std::vector<TData>& trainingSet) const
+{
+    assert(k <= myKDTree<TData>::_dataSet.size());
+    std::vector<TData> nnList(k*trainingSet.size());
+
+    // parallelize over training set
+#pragma omp parallel for
+    for (size_t i = 0; i < trainingSet.size(); ++i)
+    {
+        BPQ<TData> bpq(k);
+
+        // 1.) compute k smallest distances
+        for (size_t j = 0; j < myKDTree<TData>::_dataSet.size(); ++j)
+            bpq.enqueue(TData::metricKernel(trainingSet[i], myKDTree<TData>::_dataSet[j]), &myKDTree<TData>::_dataSet[j]);
+
+        // 2.) copy k-nearest neighbors in increasing distance order
+        std::vector<TData> nn = bpq.getValues();
+        for (size_t j = 0; j < k; ++j)
+            nnList[i*k + j] = nn[j];
+    }
+    return nnList;
+}
+
+
+template <typename TData>
+std::vector<TData> myKNN<TData>::findKNNUsingTree(const size_t k, const std::vector<TData>& trainingSet) const
+{
+    assert(k <= myKDTree<TData>::_dataSet.size());
+    std::vector<TData> nnList(k*trainingSet.size());
+
+    // parallelize over training set
+#pragma omp parallel for
+    for (size_t i = 0; i < trainingSet.size(); ++i)
+    {
+        BPQ<TData> bpq(k);
+
+        // 1.) compute k smallest distances using tree
+        _recursiveTreeKNN(trainingSet[i], myKDTree<TData>::_proot, bpq);
+
+        // 2.) copy k-nearest neighbors in increasing distance order
+        std::vector<TData> nn = bpq.getValues();
+        for (size_t j = 0; j < k; ++j)
+            nnList[i*k + j] = nn[j];
+    }
+    return nnList;
 }
 
 
