@@ -51,7 +51,7 @@ public:
         return copies;
     }
 
-    std::vector<const T> getValues() const
+    std::vector<const T> getValuesDeep() const
     {
         std::vector<size_t> sortedIdx(_priority.size());
         std::iota(sortedIdx.begin(), sortedIdx.end(), 0);
