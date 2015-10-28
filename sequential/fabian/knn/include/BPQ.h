@@ -51,6 +51,21 @@ public:
         return copies;
     }
 
+    std::vector<const T> getValues() const
+    {
+        std::vector<size_t> sortedIdx(_priority.size());
+        std::iota(sortedIdx.begin(), sortedIdx.end(), 0);
+        std::sort(sortedIdx.begin(), sortedIdx.end(),
+                [this](const size_t lhs, const size_t rhs)
+                { return this->_priority[lhs] < this->_priority[rhs]; });
+
+        std::vector<const T> copies;
+        copies.reserve(_priority.size());
+        for (size_t i = 0; i < _priority.size(); ++i)
+            copies.push_back(*_value[sortedIdx[i]]);
+        return copies;
+    }
+
 private:
     const size_t _size;
     std::vector<typename T::MetricType> _priority;
