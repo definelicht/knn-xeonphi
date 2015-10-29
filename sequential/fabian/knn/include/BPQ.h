@@ -59,7 +59,7 @@ public:
                 [this](const size_t lhs, const size_t rhs)
                 { return this->_priority[lhs] < this->_priority[rhs]; });
 
-        std::vector<const T> copies;
+        std::vector<T> copies;
         copies.reserve(_priority.size());
         for (size_t i = 0; i < _priority.size(); ++i)
             copies.push_back(*_value[sortedIdx[i]]);
