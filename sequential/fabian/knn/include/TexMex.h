@@ -21,9 +21,9 @@ public:
     static const size_t Dim = _dim;
     static size_t count;
 
-    TexMexData() : _tag(count++) {}
-    TexMexData(const TexMexData& c) : _tag(count++) { _copy(c); }
+    TexMexData() {}
     TexMexData(const T * const c) : _tag(count++) { _copy(c); }
+    TexMexData(const TexMexData& c) { _tag = c._tag; _copy(c); }
     TexMexData& operator=(const TexMexData& c)
     {
         if (this != &c)
