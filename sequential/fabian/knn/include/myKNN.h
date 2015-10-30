@@ -105,7 +105,7 @@ std::vector<TData> myKNN<TData>::findKNN(const size_t k, const std::vector<TData
             bpq.enqueue(TData::metricKernel(trainingSet[i], myKDTree<TData>::_dataSet[j]), &myKDTree<TData>::_dataSet[j]);
 
         // 2.) copy k-nearest neighbors in increasing distance order
-        std::vector<TData> nn = bpq.getValues();
+        std::vector<TData> nn = bpq.getValuesDeep();
         for (size_t j = 0; j < k; ++j)
             nnList[i*k + j] = nn[j];
     }
@@ -129,7 +129,7 @@ std::vector<TData> myKNN<TData>::findKNNUsingTree(const size_t k, const std::vec
         _recursiveTreeKNN(trainingSet[i], myKDTree<TData>::_proot, bpq);
 
         // 2.) copy k-nearest neighbors in increasing distance order
-        std::vector<TData> nn = bpq.getValues();
+        std::vector<TData> nn = bpq.getValuesDeep();
         for (size_t j = 0; j < k; ++j)
             nnList[i*k + j] = nn[j];
     }
