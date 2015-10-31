@@ -9,6 +9,7 @@
 #include <cassert>
 #include <cstddef>
 #include <fstream>
+#include <cstring>
 
 template <typename T, size_t _dim>
 class TexMexData
