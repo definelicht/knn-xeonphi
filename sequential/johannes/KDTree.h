@@ -350,7 +350,8 @@ void KDTree<Dim, DataType, LabelType, Randomized>::KnnRecurse(
     std::vector<int> &labels, size_t &maxDist, int &leavesVisited) const {
 
   // Approximate version
-  if (maxLeafVisits_ > 0 && leavesVisited > maxLeafVisits_) {
+  if (bestDistances.size() >= k && maxLeafVisits_ > 0 &&
+      leavesVisited > maxLeafVisits_) {
     return;
   }
   ++leavesVisited;
