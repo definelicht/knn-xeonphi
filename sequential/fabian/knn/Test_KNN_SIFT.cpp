@@ -24,6 +24,7 @@ using namespace std::chrono;
 int main(int argc, char** argv)
 {
     using TestData = TexMexData<float, 128>;
+    /* using TestData = TexMexData<float, 3>; */
 
     ArgumentParser parser(argc, (const char**)argv);
     parser.print_args();
@@ -44,6 +45,8 @@ int main(int argc, char** argv)
     // load data
     vector<TestData> base   = load_texmex_data<float, 128>(parser("-base").asString());
     vector<TestData> query  = load_texmex_data<float, 128>(parser("-query").asString());
+    /* vector<TestData> base   = load_texmex_data<float, 3>(parser("-base").asString()); */
+    /* vector<TestData> query  = load_texmex_data<float, 3>(parser("-query").asString()); */
     vector<int> groundtruth = load_texmex_data_vec<int>(parser("-groundtruth").asString());
 
     // KNN
@@ -79,6 +82,12 @@ int main(int argc, char** argv)
                 const typename TestData::TagType nnTag = b.tag();
                 const int trueTag = groundtruth[i*(k+1) + j+1];
                 if (trueTag == nnTag) ++count;
+                else
+                {
+                    cout << "Tag missmatch:" << endl;
+                    cout << "Nearest-Neighbor tag = " << nnTag << endl;
+                    cout << "Groundtruth tag =      " << trueTag << endl;
+                }
             }
         const float accuracy = static_cast<float>(count)/static_cast<float>(k*query.size())*100.0f;
         cout << "Accuracy is " << accuracy << "%" << endl;
