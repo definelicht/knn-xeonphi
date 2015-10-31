@@ -74,6 +74,7 @@ int main(int argc, char** argv)
     // check
     if (100==k)
     {
+        vector<TestData> base = load_texmex_data<float, 128>(parser("-base").asString());
         size_t count = 0;
         for (size_t i = 0; i < query.size(); ++i)
             for (size_t j = 0; j < k; ++j)
@@ -84,9 +85,12 @@ int main(int argc, char** argv)
                 if (trueTag == nnTag) ++count;
                 else
                 {
+                    TestData& a = base[trueTag];
+                    const typename TestData::MetricType dist = TestData::metricKernel(a, b);
                     cout << "Tag missmatch:" << endl;
-                    cout << "Nearest-Neighbor tag = " << nnTag << endl;
-                    cout << "Groundtruth tag =      " << trueTag << endl;
+                    cout << "\tNearest-Neighbor tag = " << nnTag << endl;
+                    cout << "\tGroundtruth tag      = " << trueTag << endl;
+                    cout << "\tDistance             = " << dist << endl;
                 }
             }
         const float accuracy = static_cast<float>(count)/static_cast<float>(k*query.size())*100.0f;
