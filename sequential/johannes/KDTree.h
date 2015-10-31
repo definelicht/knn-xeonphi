@@ -80,6 +80,10 @@ public:
 
   void set_nVarianceSamples(int nVarianceSamples);
 
+  int maxLeafVisits() const;
+
+  void set_maxLeafVisits(int maxLeafVisits);
+
   NodeItr Root() const;
 
   template <typename DistType>
@@ -103,10 +107,11 @@ private:
       size_t k, DataItr const &point,
       std::function<DistType(DataItr const &, DataItr const &)> const &distFunc,
       NodeItr const &node, std::vector<DistType> &bestDistances,
-      std::vector<int> &labels, size_t &maxDist) const;
+      std::vector<int> &labels, size_t &maxDist, int &leavesVisited) const;
 
   size_t size_;
   int nVarianceSamples_{0};
+  int maxLeafVisits_{0};
   std::vector<Node> tree_{};
   std::unordered_map<int, LabelType> labelMapping_{};
   std::unordered_map<LabelType, int> labelMappingInv_{};
@@ -298,6 +303,17 @@ void KDTree<Dim, DataType, LabelType, Randomized>::set_nVarianceSamples(
 }
 
 template <size_t Dim, typename DataType, typename LabelType, bool Randomized>
+int KDTree<Dim, DataType, LabelType, Randomized>::maxLeafVisits() const {
+  return maxLeafVisits_;
+}
+
+template <size_t Dim, typename DataType, typename LabelType, bool Randomized>
+void KDTree<Dim, DataType, LabelType, Randomized>::set_maxLeafVisits(
+    int maxLeafVisits) {
+  maxLeafVisits_ = maxLeafVisits;
+}
+
+template <size_t Dim, typename DataType, typename LabelType, bool Randomized>
 typename KDTree<Dim, DataType, LabelType, Randomized>::TreeItr
 KDTree<Dim, DataType, LabelType, Randomized>::BuildTree(
     DataContainer const &points, LabelContainer const &labels,
@@ -331,7 +347,13 @@ void KDTree<Dim, DataType, LabelType, Randomized>::KnnRecurse(
     const size_t k, DataItr const &point,
     std::function<DistType(DataItr const &, DataItr const &)> const &distFunc,
     NodeItr const &node, std::vector<DistType> &bestDistances,
-    std::vector<int> &labels, size_t &maxDist) const {
+    std::vector<int> &labels, size_t &maxDist, int &leavesVisited) const {
+
+  // Approximate version
+  if (maxLeafVisits_ > 0 && leavesVisited > maxLeafVisits_) {
+    return;
+  }
+  ++leavesVisited;
 
   const DistType thisDist = distFunc(point, node.value());
 
@@ -357,12 +379,14 @@ void KDTree<Dim, DataType, LabelType, Randomized>::KnnRecurse(
     if (doLeft) {
       const auto left = node.Left();
       if (left.inBounds()) {
-        KnnRecurse(k, point, distFunc, left, bestDistances, labels, maxDist);
+        KnnRecurse(k, point, distFunc, left, bestDistances, labels, maxDist,
+                   leavesVisited);
       }
     } else {
       const auto right = node.Right();
       if (right.inBounds()) {
-        KnnRecurse(k, point, distFunc, right, bestDistances, labels, maxDist);
+        KnnRecurse(k, point, distFunc, right, bestDistances, labels, maxDist,
+                   leavesVisited);
       }
     }
   };
@@ -390,8 +414,9 @@ LabelType KDTree<Dim, DataType, LabelType, Randomized>::Knn(
   std::vector<DistType> bestDistances;
   std::vector<int> labels;
   size_t maxDist = 0;
+  int leavesVisited = 0;
   KnnRecurse<DistType>(k, point, distFunc, Root(), bestDistances, labels,
-                       maxDist);
+                       maxDist, leavesVisited);
   std::vector<int> vote(labelMapping_.size(), 0);
   LabelType label{};
   int highest = -1;
