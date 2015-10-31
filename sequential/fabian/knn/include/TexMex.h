@@ -68,15 +68,16 @@ template <typename T, size_t _dim>
 size_t TexMexData<T, _dim>::count = 0;
 
 
-template <typename T, size_t d>
+template <typename T, size_t d=128, size_t _d=128>
 std::vector<TexMexData<T,d> > load_texmex_data(const std::string& filename)
 {
+    assert(d <= _d);
     std::ifstream binfile(filename, std::ios::binary);
     binfile.seekg(0, std::ios::end);
     auto fileSize = binfile.tellg();
     binfile.seekg(0, std::ios::beg);
 
-    const size_t N = fileSize / (sizeof(int) + d*sizeof(T));
+    const size_t N = fileSize / (sizeof(int) + _d*sizeof(T));
     std::vector<TexMexData<T,d> > data;
     data.reserve(N);
 
@@ -84,9 +85,10 @@ std::vector<TexMexData<T,d> > load_texmex_data(const std::string& filename)
     T buf[d];
     for (size_t i = 0; i < N; ++i)
     {
+        binfile.seekg(i*(sizeof(int) + _d*sizeof(T)), std::ios::beg);
         binfile.read((char*)(&dim), sizeof(int));
-        assert(dim == d);
-        binfile.read((char*)(&buf[0]), d*sizeof(T));
+        assert(dim == _d);
+        binfile.read((char*)(&buf[0]), d*sizeof(T)); // note d <= _d
         data.push_back(TexMexData<T,d>(&buf[0]));
     }
     return data;
