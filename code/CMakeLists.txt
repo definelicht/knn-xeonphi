@@ -12,7 +12,8 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Weffc++")
 set(KNN_SRC
   BinaryIO.cc)
 
-set(KNN_APPS_SRC)
+set(KNN_APPS_SRC
+  KDTreeClassify.cc)
 
 set(KNN_TEST_SRC
   TestBinaryIO.cc)
