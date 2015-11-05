@@ -2,17 +2,23 @@
 #include <cassert>
 #include <fstream>
 #include <iostream>
+#include <random>
+#include <string>
 #include <vector>
 
 int main() {
   const std::string path("TestLoadBinary.data");
-  const std::vector<double> data{1e0, 1e1, 1e2, 1e3, 1e4, 1e5, 1e6, 1e7, 1e8};
+  std::vector<double> data;
+  std::mt19937 rng;
+  std::uniform_real_distribution<double> dist;
+  for (int i = 0; i < 1000; ++i) {
+    data.emplace_back(dist(rng));
+  }
   knn::WriteBinaryFile(path, data);
   auto test = knn::LoadBinaryFile<double>(path);
   assert(test.size() == data.size());
   for (int i = 0, iEnd = data.size(); i < iEnd; ++i) {
     assert(test[i] == data[i]);
   }
-  std::cout << "TestLoadBinary ran successfully." << std::endl;
   return 0;
 }

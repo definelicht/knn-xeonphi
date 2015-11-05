@@ -15,7 +15,7 @@ set(KNN_SRC
 set(KNN_APPS_SRC)
 
 set(KNN_TEST_SRC
-  TestLoadBinary.cc)
+  TestBinaryIO.cc)
 
 set(KNN_SRC_PATHS)
 foreach(SRC_FILE ${KNN_SRC})
