@@ -434,7 +434,6 @@ template <size_t Dim, typename DataType, typename LabelType, bool Randomized>
 std::vector<DataType> KDTree<Dim, DataType, LabelType, Randomized>::Variance(
     DataContainer const &data, std::vector<size_t>::const_iterator begin,
     std::vector<size_t>::const_iterator const &end) {
-  // https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Online_algorithm
   std::vector<DataType> sum(Dim, 0);
   std::vector<DataType> sumOfSquares(Dim, 0);
   const int iMax = nVarianceSamples_ > 0
@@ -451,8 +450,10 @@ std::vector<DataType> KDTree<Dim, DataType, LabelType, Randomized>::Variance(
     ++begin;
   }
   for (unsigned j = 0; j < Dim; ++j) {
-    // Reuse sumOfSquars vector for computing the variance
-    sumOfSquares[j] = (sumOfSquares[j] - sum[j] * sum[j] / iMax) / (iMax - 1);
+    // Reuse sumOfSquares vector for computing the variance. Don't divide by
+    // (N - 1) as this will only be used for intercomparison.
+    sumOfSquares[j] =
+        sumOfSquares[j] - (sum[j] * sum[j]) / iMax; // / (iMax - 1);
   }
   return sumOfSquares;
 }
