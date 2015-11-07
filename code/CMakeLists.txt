@@ -4,6 +4,11 @@ project(knn)
 find_package(Threads REQUIRED)
 set(KNN_LIBS ${KNN_LIBS} ${CMAKE_THREAD_LIBS_INIT})
 
+find_package(OpenMP)
+if (OpenMP_FOUND OR OPENMP_FOUND)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+endif()
+
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1z -O3")
@@ -13,7 +18,7 @@ set(KNN_SRC
   BinaryIO.cc)
 
 set(KNN_APPS_SRC
-  KDTreeClassify.cc)
+  SIFTClassify.cc)
 
 set(KNN_TEST_SRC
   TestBinaryIO.cc)
