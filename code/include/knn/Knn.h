@@ -90,6 +90,13 @@ std::vector<LabelType> KnnClassifyExact(
     std::function<DistType(DataItr<DataType> const &,
                            DataItr<DataType> const &)> distFunc);
 
+template <size_t Dim, typename DistType, typename DataType, typename LabelType>
+std::vector<LabelType> KnnApproximate(
+    std::vector<KDTree<Dim, true, DataType, LabelType>> const &randTrees,
+    const int k, DataItr<DataType> const &query,
+    std::function<DistType(DataItr<DataType> const &,
+                           DataItr<DataType> const &)> distFunc);
+
 ////////////////////////////////////////////////////////////////////////////////
 // Auxiliary functions
 ////////////////////////////////////////////////////////////////////////////////
@@ -106,7 +113,7 @@ template <size_t Dim, typename DistType, typename DataType, typename LabelType>
 void KnnExactRecurse(
     typename KDTree<Dim, false, DataType, LabelType>::NodeItr const &node,
     const size_t k, DataItr<DataType> const &query,
-    BoundedHeap<std::pair<DistType, LabelType>> &neighbors,
+    BoundedHeap<std::pair<DistType, LabelType>, true> &neighbors,
     std::function<DistType(DataItr<DataType> const &,
                            DataItr<DataType> const &)> distFunc) {
 
@@ -162,7 +169,7 @@ KnnLinear(DataContainer<DataType> const &trainingPoints,
   assert(sizeDiv.rem == 0);
   const int nPoints = sizeDiv.quot;
   assert(k <= nPoints);
-  BoundedHeap<std::pair<DistType, LabelType>> neighbors(
+  BoundedHeap<std::pair<DistType, LabelType>, true> neighbors(
       k, CompareNeighbors<DistType, LabelType>);
   DataItr<DataType> currComp = trainingPoints.cbegin();
   // Compare to all training points
@@ -245,7 +252,7 @@ KnnExact(KDTree<Dim, false, DataType, LabelType> const &kdTree, const int k,
          DataItr<DataType> const &query,
          std::function<DistType(DataItr<DataType> const &,
                                 DataItr<DataType> const &)> distFunc) {
-  BoundedHeap<std::pair<DistType, LabelType>> neighbors(
+  BoundedHeap<std::pair<DistType, LabelType>, true> neighbors(
       k, CompareNeighbors<DistType, LabelType>);
   KnnExactRecurse<Dim, DistType, DataType, LabelType>(kdTree.Root(), k, query,
                                                       neighbors, distFunc);
