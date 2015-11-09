@@ -82,9 +82,14 @@ private:
   int nVarianceSamples_{0};
   std::vector<Node> tree_{};
   GetSplitDimImpl<Randomized, Dim, DataType> getSplitDimImpl_{};
-}; // End class KDTree
+};
+
+////////////////////////////////////////////////////////////////////////////////
+// Implementations
+////////////////////////////////////////////////////////////////////////////////
 
 namespace {
+
 template <size_t Dim, typename DataType>
 class GetSplitDimImpl<false, Dim, DataType> {
 public:
@@ -94,6 +99,7 @@ public:
         std::max_element(variances.cbegin(), variances.cend()));
   }
 };
+
 template <size_t Dim, typename DataType>
 class GetSplitDimImpl<true, Dim, DataType> {
 public:
@@ -122,6 +128,7 @@ private:
   std::mt19937 rng;
   std::uniform_int_distribution<size_t> dist;
 };
+
 } // End anonymous namespace
 
 template <size_t Dim, bool Randomized, typename DataType, typename LabelType>
