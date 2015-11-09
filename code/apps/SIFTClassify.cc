@@ -89,11 +89,15 @@ int main(int argc, char const *argv[]) {
   float equalKdTree = 0;
 
   timer.Start();
+  auto sortByIndex = [](std::pair<float, size_t> const &a,
+                        std::pair<float, size_t> const &b) {
+    return a.second < b.second;
+  };
   #pragma omp parallel for reduction(+ : equalLinear, equalKdTree)
   for (int i = 0; i < nTest; ++i) {
     std::sort(groundTruth.begin() + i * k, groundTruth.begin() + (i + 1) * k);
-    std::sort(resultLinear[i].begin(), resultLinear[i].end());
-    std::sort(resultKdTree[i].begin(), resultKdTree[i].end());
+    std::sort(resultLinear[i].begin(), resultLinear[i].end(), sortByIndex);
+    std::sort(resultKdTree[i].begin(), resultKdTree[i].end(), sortByIndex);
     auto iLinear = resultLinear[i].cbegin();
     auto iLinearEnd = resultLinear[i].cend();
     auto iKd = resultKdTree[i].cbegin();
@@ -102,21 +106,21 @@ int main(int argc, char const *argv[]) {
               iGtEnd = groundTruth.cend() + (i + 1) * k;
          iGt < iGtEnd; ++iGt) {
       while (iLinear < iLinearEnd) {
-        if (static_cast<int>(*iLinear) == *iGt) {
+        if (static_cast<int>(iLinear->second) == *iGt) {
           ++iLinear;
           equalLinear += 1;
           break;
-        } else if (static_cast<int>(*iLinear) > *iGt) {
+        } else if (static_cast<int>(iLinear->second) > *iGt) {
           break;
         }
         ++iLinear;
       }
       while (iKd < iKdEnd) {
-        if (static_cast<int>(*iKd) == *iGt) {
+        if (static_cast<int>(iKd->second) == *iGt) {
           ++iKd;
           equalKdTree += 1;
           break;
-        } else if (static_cast<int>(*iKd) > *iGt) {
+        } else if (static_cast<int>(iKd->second) > *iGt) {
           break;
         }
         ++iKd;

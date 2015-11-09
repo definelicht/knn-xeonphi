@@ -17,7 +17,7 @@ namespace knn {
 
 /// \brief O(n^2) KNN for a single query.
 template <unsigned Dim, typename DistType, typename DataType>
-std::vector<size_t>
+std::vector<std::pair<DistType, size_t>>
 KnnLinear(DataContainer<DataType> const &trainingPoints, int k,
           DataItr<DataType> const &query,
           std::function<DistType(DataItr<DataType> const &,
@@ -26,7 +26,7 @@ KnnLinear(DataContainer<DataType> const &trainingPoints, int k,
 /// \brief O(N) KNN for multiple queries, accelerated using OpenMP if
 /// available.
 template <unsigned Dim, typename DistType, typename DataType>
-std::vector<std::vector<size_t>>
+std::vector<std::vector<std::pair<DistType, size_t>>>
 KnnLinear(DataContainer<DataType> const &trainingPoints, int k,
           DataContainer<DataType> const &queries,
           std::function<DistType(DataItr<DataType> const &,
@@ -34,7 +34,7 @@ KnnLinear(DataContainer<DataType> const &trainingPoints, int k,
 
 /// \brief Exact KNN using a kd-tree for search for a single query.
 template <size_t Dim, typename DistType, typename DataType>
-std::vector<size_t>
+std::vector<std::pair<DistType, size_t>>
 KnnExact(KDTree<Dim, false, DataType> const &kdTree, int k,
          DataItr<DataType> const &query,
          std::function<DistType(DataItr<DataType> const &,
@@ -43,14 +43,14 @@ KnnExact(KDTree<Dim, false, DataType> const &kdTree, int k,
 /// \brief Exact KNN using a kd-tree for search for a multiple query.
 /// Accelerated using OpenMP if available.
 template <size_t Dim, typename DistType, typename DataType>
-std::vector<std::vector<size_t>>
+std::vector<std::vector<std::pair<DistType, size_t>>>
 KnnExact(KDTree<Dim, false, DataType> const &kdTree, int k,
          DataContainer<DataType> const &queries,
          std::function<DistType(DataItr<DataType> const &,
                                 DataItr<DataType> const &)> distFunc);
 
 template <size_t Dim, typename DistType, typename DataType>
-std::vector<size_t>
+std::vector<std::pair<DistType, size_t>>
 KnnApproximate(std::vector<KDTree<Dim, true, DataType>> const &randTrees, int k,
                int maxLeaves, DataItr<DataType> const &query,
                std::function<DistType(DataItr<DataType> const &,
@@ -77,8 +77,7 @@ void KnnExactRecurse(
                            DataItr<DataType> const &)> distFunc) {
 
   auto value = node.value();
-  neighbors.TryPush(
-      std::make_pair(distFunc(query, value), node.index()));
+  neighbors.TryPush(std::make_pair(distFunc(query, value), node.index()));
 
   auto traverseSubtree = [&](bool doLeft) {
     if (doLeft) {
@@ -110,21 +109,24 @@ void KnnExactRecurse(
   }
 }
 
-// template <size_t Dim, typename DistType, typename DataType, typename LabelType>
+// template <size_t Dim, typename DistType, typename DataType, typename
+// LabelType>
 // std::vector<LabelType> KnnApproximateRecurse(
 //     typename KDTree<Dim, true, DataType, LabelType>::NodeItr const &root,
 //     const int k, const int maxLeaves, DataItr<DataType> const &query,
 //     std::function<DistType(DataItr<DataType> const &,
 //                            DataItr<DataType> const &)> distFunc,
-//     BoundedHeap<true, std::pair<DistType, typename KDTree<Dim, true, DataType,
+//     BoundedHeap<true, std::pair<DistType, typename KDTree<Dim, true,
+//     DataType,
 //                                                           LabelType>::NodeItr>>
 //         &bestBins,
-//     std::vector<bool> &binsChecked, BoundedHeap<DistType, LabelType> &neighbors,
+//     std::vector<bool> &binsChecked, BoundedHeap<DistType, LabelType>
+//     &neighbors,
 //     int &leavesSearched) {
-// 
+//
 //   // Check if this branch has already been searched
 //   if (checked[std::distance(
-//   
+//
 // }
 
 } // End anonymous namespace
@@ -134,12 +136,12 @@ void KnnExactRecurse(
 ////////////////////////////////////////////////////////////////////////////////
 
 template <unsigned Dim, typename DistType, typename DataType>
-std::vector<size_t>
+std::vector<std::pair<DistType, size_t>>
 KnnLinear(DataContainer<DataType> const &trainingPoints, const int k,
           DataItr<DataType> const &query,
           std::function<DistType(DataItr<DataType> const &,
                                  DataItr<DataType> const &)> distFunc) {
-  const size_t nPoints = trainingPoints.size()/Dim;
+  const size_t nPoints = trainingPoints.size() / Dim;
   BoundedHeap<std::pair<DistType, size_t>, true> neighbors(
       k, CompareNeighbors<DistType, size_t>);
   const DataItr<DataType> begin = trainingPoints.cbegin();
@@ -149,24 +151,17 @@ KnnLinear(DataContainer<DataType> const &trainingPoints, const int k,
     neighbors.TryPush(std::make_pair(distFunc(query, currComp), i));
   }
   auto heapContent = neighbors.Destroy();
-  // Sort neighbors by closest distance
-  std::sort_heap(heapContent.begin(), heapContent.end(),
-                 CompareNeighbors<DistType, size_t>);
-  std::vector<size_t> neighborIndices(k);
-  for (int i = 0; i < k; ++i) {
-    neighborIndices[i] = heapContent[i].second;
-  }
-  return neighborIndices;
+  return heapContent;
 }
 
 template <unsigned Dim, typename DistType, typename DataType>
-std::vector<std::vector<size_t>>
+std::vector<std::vector<std::pair<DistType, size_t>>>
 KnnLinear(DataContainer<DataType> const &trainingPoints, const int k,
           DataContainer<DataType> const &queries,
           std::function<DistType(DataItr<DataType> const &,
                                  DataItr<DataType> const &)> distFunc) {
   const int nQueries = queries.size() / Dim;
-  std::vector<std::vector<size_t>> neighbors(nQueries);
+  std::vector<std::vector<std::pair<DistType, size_t>>> neighbors(nQueries);
 #pragma omp parallel for
   for (int i = 0; i < nQueries; ++i) {
     neighbors[i] =
@@ -176,7 +171,7 @@ KnnLinear(DataContainer<DataType> const &trainingPoints, const int k,
 }
 
 template <size_t Dim, typename DistType, typename DataType>
-std::vector<size_t>
+std::vector<std::pair<DistType, size_t>>
 KnnExact(KDTree<Dim, false, DataType> const &kdTree, const int k,
          DataItr<DataType> const &query,
          std::function<DistType(DataItr<DataType> const &,
@@ -185,25 +180,18 @@ KnnExact(KDTree<Dim, false, DataType> const &kdTree, const int k,
       k, CompareNeighbors<DistType, size_t>);
   KnnExactRecurse<Dim, DistType, DataType>(kdTree.Root(), k, query, neighbors,
                                            distFunc);
-  // Sort according to lowest distance
   auto heapContent = neighbors.Destroy();
-  std::sort_heap(heapContent.begin(), heapContent.end(),
-                 CompareNeighbors<DistType, size_t>);
-  std::vector<size_t> neighborIndices(k);
-  for (int i = 0; i < k; ++i) {
-    neighborIndices[i] = heapContent[i].second;
-  }
-  return neighborIndices;
+  return heapContent;
 }
 
 template <size_t Dim, typename DistType, typename DataType>
-std::vector<std::vector<size_t>>
+std::vector<std::vector<std::pair<DistType, size_t>>>
 KnnExact(KDTree<Dim, false, DataType> const &kdTree, const int k,
          DataContainer<DataType> const &queries,
          std::function<DistType(DataItr<DataType> const &,
                                 DataItr<DataType> const &)> distFunc) {
   const int nQueries = queries.size() / Dim;
-  std::vector<std::vector<size_t>> neighbors(nQueries);
+  std::vector<std::vector<std::pair<DistType, size_t>>> neighbors(nQueries);
 #pragma omp parallel for
   for (int i = 0; i < nQueries; ++i) {
     neighbors[i] = KnnExact(kdTree, k, queries.cbegin() + i * Dim, distFunc);
@@ -211,8 +199,8 @@ KnnExact(KDTree<Dim, false, DataType> const &kdTree, const int k,
   return neighbors;
 }
 
-// template <size_t Dim, typename DistType, typename DataType, typename LabelType>
-// std::vector<LabelType> KnnApproximate(
+// template <size_t Dim, typename DistType, typename DataType>
+// std::vector<std::pair<DistType, size_t>> KnnApproximate(
 //     std::vector<KDTree<Dim, true, DataType, LabelType>> const &randTrees,
 //     const int k, const int maxLeaves, DataItr<DataType> const &query,
 //     std::function<DistType(DataItr<DataType> const &,
@@ -224,7 +212,7 @@ KnnExact(KDTree<Dim, false, DataType> const &kdTree, const int k,
 //       bestBins(maxLeaves,
 //                CompareNeighbors<DistType, typename KDTree<Dim, true, DataType,
 //                                                           LabelType>::NodeItr>);
-//   std::vector<bool> checked(randTrees[0].size(), true); 
+//   std::vector<bool> checked(randTrees[0].size(), true);
 //   BoundedHeap<true, std::pair<DistType, LabelType>> neighbors(k);
 //   int leavesSearched = 0;
 // 
