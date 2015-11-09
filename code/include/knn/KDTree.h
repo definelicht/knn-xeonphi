@@ -17,17 +17,16 @@ namespace {
 template <bool Randomized, size_t Dim, typename DataType> class GetSplitDimImpl;
 } // End anonymous namespace
 
-template <size_t Dim, bool Randomized, typename DataType, typename LabelType>
+template <size_t Dim, bool Randomized, typename DataType>
 class KDTree {
 
 private:
   struct Node {
-    const DataItr<DataType> value;
-    const DataItr<LabelType> label;
+    DataItr<DataType> value;
+    size_t index;
     const size_t splitDim;
     typename std::vector<Node>::const_iterator parent, left, right;
-    Node(DataItr<DataType> const &_value, DataItr<LabelType> const &_label,
-         size_t _splitDim,
+    Node(DataItr<DataType> const &_value, size_t _index, size_t _splitDim,
          typename std::vector<Node>::const_iterator const &_parent,
          typename std::vector<Node>::const_iterator const &_end);
   };
@@ -45,7 +44,7 @@ public:
     bool TryParent();
     bool inBounds() const;
     DataItr<DataType> value() const;
-    DataItr<LabelType> label() const;
+    size_t index() const;
     size_t splitDim() const;
 
   private:
@@ -53,8 +52,7 @@ public:
     const TreeItr end_;
   };
 
-  KDTree(DataContainer<DataType> const &points,
-         DataContainer<LabelType> const &labels);
+  KDTree(DataContainer<DataType> const &points);
 
   size_t size() const;
 
@@ -68,7 +66,6 @@ public:
 
 private:
   TreeItr BuildTree(DataContainer<DataType> const &data,
-                    DataContainer<LabelType> const &labels,
                     std::vector<size_t>::iterator begin,
                     std::vector<size_t>::iterator const &end,
                     TreeItr const &parent);
@@ -131,10 +128,8 @@ private:
 
 } // End anonymous namespace
 
-template <size_t Dim, bool Randomized, typename DataType, typename LabelType>
-KDTree<Dim, Randomized, DataType, LabelType>::KDTree(
-    DataContainer<DataType> const &points,
-    DataContainer<LabelType> const &labels)
+template <size_t Dim, bool Randomized, typename DataType>
+KDTree<Dim, Randomized, DataType>::KDTree(DataContainer<DataType> const &points)
     : size_(Dim > 0 ? points.size() / Dim : 0) {
   static_assert(Dim > 0, "KDTree data cannot be zero-dimensional.");
   if (size_ == 0) {
@@ -143,49 +138,46 @@ KDTree<Dim, Randomized, DataType, LabelType>::KDTree(
   if (points.size() % Dim != 0) {
     throw std::invalid_argument("KDTree received unbalanced data.");
   }
-  if (labels.size() != size_) {
-    throw std::invalid_argument(
-        "KDTree received mismatched point and label size.");
-  }
   tree_.reserve(size_);
   std::vector<size_t> indices(size_);
   std::iota(indices.begin(), indices.end(), 0);
-  BuildTree(points, labels, indices.begin(), indices.end(),
-            tree_.begin() + size_);
+  BuildTree(points, indices.begin(), indices.end(), tree_.begin() + size_);
 }
 
-template <size_t Dim, bool Randomized, typename DataType, typename LabelType>
-KDTree<Dim, Randomized, DataType, LabelType>::Node::Node(
-    DataItr<DataType> const &_value, DataItr<LabelType> const &_label,
-    const size_t _splitDim, TreeItr const &_parent, TreeItr const &_end)
-    : value(_value), label(_label), splitDim(_splitDim), parent(_parent),
+template <size_t Dim, bool Randomized, typename DataType>
+KDTree<Dim, Randomized, DataType>::Node::Node(DataItr<DataType> const &_value,
+                                              size_t _index,
+                                              const size_t _splitDim,
+                                              TreeItr const &_parent,
+                                              TreeItr const &_end)
+    : value(_value), index(_index), splitDim(_splitDim), parent(_parent),
       left(_end), right(_end) {}
 
-template <size_t Dim, bool Randomized, typename DataType, typename LabelType>
-KDTree<Dim, Randomized, DataType, LabelType>::NodeItr::NodeItr(
+template <size_t Dim, bool Randomized, typename DataType>
+KDTree<Dim, Randomized, DataType>::NodeItr::NodeItr(
     TreeItr const &node, TreeItr const &end)
     : node_(node), end_(end) {}
 
-template <size_t Dim, bool Randomized, typename DataType, typename LabelType>
-typename KDTree<Dim, Randomized, DataType, LabelType>::NodeItr
-KDTree<Dim, Randomized, DataType, LabelType>::NodeItr::Left() const {
+template <size_t Dim, bool Randomized, typename DataType>
+typename KDTree<Dim, Randomized, DataType>::NodeItr
+KDTree<Dim, Randomized, DataType>::NodeItr::Left() const {
   return {node_->left, end_};
 }
 
-template <size_t Dim, bool Randomized, typename DataType, typename LabelType>
-typename KDTree<Dim, Randomized, DataType, LabelType>::NodeItr
-KDTree<Dim, Randomized, DataType, LabelType>::NodeItr::Right() const {
+template <size_t Dim, bool Randomized, typename DataType>
+typename KDTree<Dim, Randomized, DataType>::NodeItr
+KDTree<Dim, Randomized, DataType>::NodeItr::Right() const {
   return {node_->right, end_};
 }
 
-template <size_t Dim, bool Randomized, typename DataType, typename LabelType>
-typename KDTree<Dim, Randomized, DataType, LabelType>::NodeItr
-KDTree<Dim, Randomized, DataType, LabelType>::NodeItr::Parent() const {
+template <size_t Dim, bool Randomized, typename DataType>
+typename KDTree<Dim, Randomized, DataType>::NodeItr
+KDTree<Dim, Randomized, DataType>::NodeItr::Parent() const {
   return {node_->parent, end_};
 }
 
-template <size_t Dim, bool Randomized, typename DataType, typename LabelType>
-bool KDTree<Dim, Randomized, DataType, LabelType>::NodeItr::TryLeft() {
+template <size_t Dim, bool Randomized, typename DataType>
+bool KDTree<Dim, Randomized, DataType>::NodeItr::TryLeft() {
   if (node_->left != end_) {
     node_ = node_->left;
     return true;
@@ -193,8 +185,8 @@ bool KDTree<Dim, Randomized, DataType, LabelType>::NodeItr::TryLeft() {
   return false;
 }
 
-template <size_t Dim, bool Randomized, typename DataType, typename LabelType>
-bool KDTree<Dim, Randomized, DataType, LabelType>::NodeItr::TryRight() {
+template <size_t Dim, bool Randomized, typename DataType>
+bool KDTree<Dim, Randomized, DataType>::NodeItr::TryRight() {
   if (node_->right != end_) {
     node_ = node_->right;
     return true;
@@ -202,8 +194,8 @@ bool KDTree<Dim, Randomized, DataType, LabelType>::NodeItr::TryRight() {
   return false;
 }
 
-template <size_t Dim, bool Randomized, typename DataType, typename LabelType>
-bool KDTree<Dim, Randomized, DataType, LabelType>::NodeItr::TryParent() {
+template <size_t Dim, bool Randomized, typename DataType>
+bool KDTree<Dim, Randomized, DataType>::NodeItr::TryParent() {
   if (node_->parent != end_) {
     node_ = node_->parent;
     return true;
@@ -211,60 +203,58 @@ bool KDTree<Dim, Randomized, DataType, LabelType>::NodeItr::TryParent() {
   return false;
 }
 
-template <size_t Dim, bool Randomized, typename DataType, typename LabelType>
-bool KDTree<Dim, Randomized, DataType, LabelType>::NodeItr::inBounds() const {
+template <size_t Dim, bool Randomized, typename DataType>
+bool KDTree<Dim, Randomized, DataType>::NodeItr::inBounds() const {
   return node_ != end_;
 }
 
-template <size_t Dim, bool Randomized, typename DataType, typename LabelType>
+template <size_t Dim, bool Randomized, typename DataType>
 DataItr<DataType>
-KDTree<Dim, Randomized, DataType, LabelType>::NodeItr::value() const {
+KDTree<Dim, Randomized, DataType>::NodeItr::value() const {
   return node_->value;
 }
 
-template <size_t Dim, bool Randomized, typename DataType, typename LabelType>
-DataItr<LabelType>
-KDTree<Dim, Randomized, DataType, LabelType>::NodeItr::label() const {
-  return node_->label;
+template <size_t Dim, bool Randomized, typename DataType>
+size_t KDTree<Dim, Randomized, DataType>::NodeItr::index() const {
+  return node_->index;
 }
 
-template <size_t Dim, bool Randomized, typename DataType, typename LabelType>
-size_t KDTree<Dim, Randomized, DataType, LabelType>::NodeItr::splitDim() const {
+template <size_t Dim, bool Randomized, typename DataType>
+size_t KDTree<Dim, Randomized, DataType>::NodeItr::splitDim() const {
   return node_->splitDim;
 }
 
-template <size_t Dim, bool Randomized, typename DataType, typename LabelType>
-typename KDTree<Dim, Randomized, DataType, LabelType>::NodeItr
-KDTree<Dim, Randomized, DataType, LabelType>::Root() const {
+template <size_t Dim, bool Randomized, typename DataType>
+typename KDTree<Dim, Randomized, DataType>::NodeItr
+KDTree<Dim, Randomized, DataType>::Root() const {
   return {tree_.cbegin(), tree_.cend()};
 }
 
-template <size_t Dim, bool Randomized, typename DataType, typename LabelType>
-size_t KDTree<Dim, Randomized, DataType, LabelType>::size() const {
+template <size_t Dim, bool Randomized, typename DataType>
+size_t KDTree<Dim, Randomized, DataType>::size() const {
   return size_;
 }
 
-template <size_t Dim, bool Randomized, typename DataType, typename LabelType>
-constexpr size_t KDTree<Dim, Randomized, DataType, LabelType>::nDims() const {
+template <size_t Dim, bool Randomized, typename DataType>
+constexpr size_t KDTree<Dim, Randomized, DataType>::nDims() const {
   return Dim;
 }
 
-template <size_t Dim, bool Randomized, typename DataType, typename LabelType>
-int KDTree<Dim, Randomized, DataType, LabelType>::nVarianceSamples() const {
+template <size_t Dim, bool Randomized, typename DataType>
+int KDTree<Dim, Randomized, DataType>::nVarianceSamples() const {
   return nVarianceSamples_;
 }
 
-template <size_t Dim, bool Randomized, typename DataType, typename LabelType>
-void KDTree<Dim, Randomized, DataType, LabelType>::set_nVarianceSamples(
+template <size_t Dim, bool Randomized, typename DataType>
+void KDTree<Dim, Randomized, DataType>::set_nVarianceSamples(
     int nVarianceSamples) {
   nVarianceSamples_ = nVarianceSamples;
 }
 
-template <size_t Dim, bool Randomized, typename DataType, typename LabelType>
-typename KDTree<Dim, Randomized, DataType, LabelType>::TreeItr
-KDTree<Dim, Randomized, DataType, LabelType>::BuildTree(
-    DataContainer<DataType> const &points,
-    DataContainer<LabelType> const &labels, std::vector<size_t>::iterator begin,
+template <size_t Dim, bool Randomized, typename DataType>
+typename KDTree<Dim, Randomized, DataType>::TreeItr
+KDTree<Dim, Randomized, DataType>::BuildTree(
+    DataContainer<DataType> const &points, std::vector<size_t>::iterator begin,
     std::vector<size_t>::iterator const &end, TreeItr const &parent) {
   if (begin >= end) {
     return tree_.cbegin() + size_;
@@ -278,16 +268,15 @@ KDTree<Dim, Randomized, DataType, LabelType>::BuildTree(
       });
   const size_t medianIndex = begin[middle];
   auto treeItr = tree_.end();
-  tree_.emplace_back(points.cbegin() + Dim * medianIndex,
-                     labels.cbegin() + medianIndex, splitDim, parent,
-                     tree_.cbegin() + size_);
-  treeItr->left = BuildTree(points, labels, begin, begin + middle, treeItr);
-  treeItr->right = BuildTree(points, labels, begin + middle + 1, end, treeItr);
+  tree_.emplace_back(points.cbegin() + Dim * medianIndex, medianIndex, splitDim,
+                     parent, tree_.cbegin() + size_);
+  treeItr->left = BuildTree(points, begin, begin + middle, treeItr);
+  treeItr->right = BuildTree(points, begin + middle + 1, end, treeItr);
   return treeItr;
 }
 
-template <size_t Dim, bool Randomized, typename DataType, typename LabelType>
-std::vector<DataType> KDTree<Dim, Randomized, DataType, LabelType>::Variance(
+template <size_t Dim, bool Randomized, typename DataType>
+std::vector<DataType> KDTree<Dim, Randomized, DataType>::Variance(
     DataContainer<DataType> const &data,
     std::vector<size_t>::const_iterator begin,
     std::vector<size_t>::const_iterator const &end) {
@@ -315,15 +304,15 @@ std::vector<DataType> KDTree<Dim, Randomized, DataType, LabelType>::Variance(
   return sumOfSquares;
 }
 
-template <size_t Dim, bool Randomized, typename DataType, typename LabelType>
+template <size_t Dim, bool Randomized, typename DataType>
 std::ostream &
 operator<<(std::ostream &os,
-           KDTree<Dim, Randomized, DataType, LabelType> const &tree) {
+           KDTree<Dim, Randomized, DataType> const &tree) {
   std::function<void(
-      typename KDTree<Dim, Randomized, DataType, LabelType>::NodeItr,
+      typename KDTree<Dim, Randomized, DataType>::NodeItr,
       std::string indent)> printRecursive = [&os,
                                              &printRecursive](
-      typename KDTree<Dim, Randomized, DataType, LabelType>::NodeItr root,
+      typename KDTree<Dim, Randomized, DataType>::NodeItr root,
       std::string indent) {
     indent += "  ";
     auto val = root.value();
@@ -331,7 +320,7 @@ operator<<(std::ostream &os,
     for (size_t i = 1; i < Dim; ++i) {
       os << ", " << (*(val + i));
     }
-    os << ") -> " << (*root.label()) << "\n";
+    os << ")\n";
     auto left = root.Left();
     if (left.inBounds()) {
       os << indent << "Left:\n";

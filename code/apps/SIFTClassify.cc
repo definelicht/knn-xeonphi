@@ -70,13 +70,13 @@ int main(int argc, char const *argv[]) {
 
   std::cout << "Nearest neighbors using linear search... ";
   timer.Start();
-  auto resultLinear = KnnLinear<128, float>(train, labels, k, test, distFunc);
+  auto resultLinear = KnnLinear<128, float>(train, k, test, distFunc);
   elapsed = timer.Stop();
   std::cout << "Done in " << elapsed << " seconds.\n";
 
   std::cout << "Building kd-tree... ";
   timer.Start();
-  KDTree<128, false, float, int> kdTree(train, labels);
+  KDTree<128, false, float> kdTree(train);
   elapsed = timer.Stop();
   std::cout << "Done in " << elapsed << " seconds.\n";
   std::cout << "Classifying using kd-tree... ";
@@ -102,21 +102,21 @@ int main(int argc, char const *argv[]) {
               iGtEnd = groundTruth.cend() + (i + 1) * k;
          iGt < iGtEnd; ++iGt) {
       while (iLinear < iLinearEnd) {
-        if (*iLinear == *iGt) {
+        if (static_cast<int>(*iLinear) == *iGt) {
           ++iLinear;
           equalLinear += 1;
           break;
-        } else if (*iLinear > *iGt) {
+        } else if (static_cast<int>(*iLinear) > *iGt) {
           break;
         }
         ++iLinear;
       }
       while (iKd < iKdEnd) {
-        if (*iKd == *iGt) {
+        if (static_cast<int>(*iKd) == *iGt) {
           ++iKd;
           equalKdTree += 1;
           break;
-        } else if (*iKd > *iGt) {
+        } else if (static_cast<int>(*iKd) > *iGt) {
           break;
         }
         ++iKd;
