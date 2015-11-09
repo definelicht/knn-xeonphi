@@ -15,6 +15,7 @@ namespace knn {
 // Declarations
 ////////////////////////////////////////////////////////////////////////////////
 
+/// \brief O(n^2) KNN for a single query.
 template <unsigned Dim, typename DistType, typename DataType,
           typename LabelType>
 std::vector<LabelType>
@@ -22,8 +23,9 @@ KnnLinear(DataContainer<DataType> const &trainingPoints,
           DataContainer<LabelType> const &trainingLabels, const int k,
           DataItr<DataType> const &query,
           std::function<DistType(DataItr<DataType> const &,
-                                 DataItr<DataType> const &)> const &distFunc);
+                                 DataItr<DataType> const &)> distFunc);
 
+/// \brief O(N) classification using KNN for a single query.
 template <unsigned Dim, typename DistType, typename DataType,
           typename LabelType>
 LabelType KnnLinearClassify(
@@ -31,50 +33,62 @@ LabelType KnnLinearClassify(
     DataContainer<LabelType> const &trainingLabels, const int k,
     DataItr<DataType> const &query,
     std::function<DistType(DataItr<DataType> const &,
-                           DataItr<DataType> const &)> const &distFunc);
+                           DataItr<DataType> const &)> distFunc);
 
+/// \brief O(N) KNN for multiple queries, accelerated using OpenMP if
+/// available.
 template <unsigned Dim, typename DistType, typename DataType, typename LabelType>
 std::vector<std::vector<LabelType>>
 KnnLinear(DataContainer<DataType> const &trainingPoints,
           DataContainer<LabelType> const &trainingLabels, const int k,
           DataContainer<DataType> const &queries,
           std::function<DistType(DataItr<DataType> const &,
-                                 DataItr<DataType> const &)> const &distFunc);
+                                 DataItr<DataType> const &)> distFunc);
 
+/// \brief O(N) classification using KNN for multiple queries, accelerated
+/// using OpenMP if available.
 template <unsigned Dim, typename DistType, typename DataType, typename LabelType>
 std::vector<LabelType> KnnLinearClassify(
     DataContainer<DataType> const &trainingPoints,
     DataContainer<LabelType> const &trainingLabels, const int k,
     DataContainer<DataType> const &queries,
     std::function<DistType(DataItr<DataType> const &,
-                           DataItr<DataType> const &)> const &distFunc);
+                           DataItr<DataType> const &)> distFunc);
 
+/// \brief Exact KNN using a kd-tree for search for a single query.
 template <size_t Dim, typename DistType, typename DataType, typename LabelType>
 std::vector<LabelType>
-KnnExact(const int k, DataItr<DataType> const &query,
+KnnExact(KDTree<Dim, false, DataType, LabelType> const &kdTree, const int k,
+         DataItr<DataType> const &query,
          std::function<DistType(DataItr<DataType> const &,
-                                DataItr<DataType> const &)> const &distFunc);
+                                DataItr<DataType> const &)> distFunc);
 
+/// \brief Classification using exact KNN using a kd-tree for search for a
+/// single query.
 template <size_t Dim, typename DistType, typename DataType, typename LabelType>
 LabelType KnnClassifyExact(
     KDTree<Dim, false, DataType, LabelType> const &kdTree, const int k,
     DataItr<DataType> const &query,
     std::function<DistType(DataItr<DataType> const &,
-                           DataItr<DataType> const &)> const &distFunc);
+                           DataItr<DataType> const &)> distFunc);
 
+/// \brief Exact KNN using a kd-tree for search for a multiple query.
+/// Accelerated using OpenMP if available.
 template <size_t Dim, typename DistType, typename DataType, typename LabelType>
 std::vector<std::vector<LabelType>>
 KnnExact(KDTree<Dim, false, DataType, LabelType> const &kdTree, const int k,
          DataContainer<DataType> const &queries,
          std::function<DistType(DataItr<DataType> const &,
-                                DataItr<DataType> const &)> const &distFunc);
+                                DataItr<DataType> const &)> distFunc);
 
+/// \brief Classification using exact KNN using a kd-tree for search for
+/// multiple queries. Accelerated using OpenMP if available.
 template <size_t Dim, typename DistType, typename DataType, typename LabelType>
 std::vector<LabelType> KnnClassifyExact(
     KDTree<Dim, false, DataType, LabelType> const &kdTree, const int k,
     DataContainer<DataType> &queries,
     std::function<DistType(DataItr<DataType> const &,
-                           DataItr<DataType> const &)> const &distFunc);
+                           DataItr<DataType> const &)> distFunc);
 
 ////////////////////////////////////////////////////////////////////////////////
 // Auxiliary functions
@@ -94,7 +108,7 @@ void KnnExactRecurse(
     const size_t k, DataItr<DataType> const &query,
     BoundedHeap<std::pair<DistType, LabelType>> &neighbors,
     std::function<DistType(DataItr<DataType> const &,
-                           DataItr<DataType> const &)> const &distFunc) {
+                           DataItr<DataType> const &)> distFunc) {
 
   neighbors.TryPush(
       std::make_pair(distFunc(query, node.value()), *node.label()));
@@ -142,7 +156,7 @@ KnnLinear(DataContainer<DataType> const &trainingPoints,
           DataContainer<LabelType> const &trainingLabels, const int k,
           DataItr<DataType> const &query,
           std::function<DistType(DataItr<DataType> const &,
-                                 DataItr<DataType> const &)> const &distFunc) {
+                                 DataItr<DataType> const &)> distFunc) {
   auto sizeDiv =
       std::div(static_cast<int>(trainingPoints.size()), static_cast<int>(Dim));
   assert(sizeDiv.rem == 0);
@@ -174,7 +188,7 @@ LabelType KnnLinearClassify(
     DataContainer<LabelType> const &trainingLabels, const int k,
     DataItr<DataType> const &query,
     std::function<DistType(DataItr<DataType> const &,
-                           DataItr<DataType> const &)> const &distFunc) {
+                           DataItr<DataType> const &)> distFunc) {
   auto neighbors =
       KnnLinear(trainingPoints, trainingLabels, k, query, distFunc);
   std::unordered_map<LabelType, int> count;
@@ -197,7 +211,7 @@ KnnLinear(DataContainer<DataType> const &trainingPoints,
           DataContainer<LabelType> const &trainingLabels, const int k,
           DataContainer<DataType> const &queries,
           std::function<DistType(DataItr<DataType> const &,
-                                 DataItr<DataType> const &)> const &distFunc) {
+                                 DataItr<DataType> const &)> distFunc) {
   const int nQueries = queries.size() / Dim;
   std::vector<std::vector<LabelType>> neighbors(nQueries);
 #pragma omp parallel for
@@ -214,7 +228,7 @@ std::vector<LabelType> KnnLinearClassify(
     DataContainer<LabelType> const &trainingLabels, const int k,
     DataContainer<DataType> const &queries,
     std::function<DistType(DataItr<DataType> const &,
-                           DataItr<DataType> const &)> const &distFunc) {
+                           DataItr<DataType> const &)> distFunc) {
   const int nQueries = queries.size() / Dim;
   std::vector<LabelType> classification(nQueries);
 #pragma omp parallel for
@@ -272,7 +286,7 @@ std::vector<std::vector<LabelType>>
 KnnExact(KDTree<Dim, false, DataType, LabelType> const &kdTree, const int k,
          DataContainer<DataType> const &queries,
          std::function<DistType(DataItr<DataType> const &,
-                                DataItr<DataType> const &)> const &distFunc) {
+                                DataItr<DataType> const &)> distFunc) {
   const int nQueries = queries.size() / Dim;
   std::vector<std::vector<LabelType>> labels(nQueries);
 #pragma omp parallel for
