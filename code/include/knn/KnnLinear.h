@@ -114,7 +114,7 @@ KnnLinear<DataType, LabelType, DistType, Dim>::Knn(
     int k, std::vector<DataType> const &queries) const {
   const int nQueries = queries.size() / Dim;
   std::vector<std::vector<LabelType>> neighbors(nQueries);
-#pragma omp parallel for
+  #pragma omp parallel for
   for (int i = 0; i < nQueries; ++i) {
     neighbors[i] = Knn(k, queries.cbegin() + i * Dim);
   }
@@ -128,7 +128,7 @@ KnnLinear<DataType, LabelType, DistType, Dim>::KnnClassify(
     int k, std::vector<DataType> const &queries) const {
   const int nQueries = queries.size() / Dim;
   std::vector<LabelType> classification(nQueries);
-#pragma omp parallel for
+  #pragma omp parallel for
   for (int i = 0; i < nQueries; ++i) {
     classification[i] = KnnClassify(k, queries.cbegin() + i * Dim);
   }
