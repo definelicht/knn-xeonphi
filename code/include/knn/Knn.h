@@ -1,5 +1,9 @@
+#pragma once
+
+#include <algorithm>
 #include <cassert>
 #include <cstdlib>
+#include <unordered_map>
 #include <vector>
 #include "knn/BoundedHeap.h"
 #include "knn/Common.h"

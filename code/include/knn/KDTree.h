@@ -7,7 +7,6 @@
 #include <random>
 #include <stdexcept> // std::invalid_argument
 #include <string>
-#include <unordered_map>
 #include <vector>
 #include "knn/BoundedHeap.h"
 #include "knn/Common.h"
