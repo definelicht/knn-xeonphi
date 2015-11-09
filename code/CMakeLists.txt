@@ -21,7 +21,8 @@ set(KNN_APPS_SRC
   SIFTClassify.cc)
 
 set(KNN_TEST_SRC
-  TestBinaryIO.cc)
+  TestBinaryIO.cc
+  TestBoundedHeap.cc)
 
 set(KNN_SRC_PATHS)
 foreach(SRC_FILE ${KNN_SRC})
