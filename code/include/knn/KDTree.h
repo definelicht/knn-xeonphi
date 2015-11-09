@@ -71,10 +71,6 @@ public:
 
   void set_nVarianceSamples(int nVarianceSamples);
 
-  int maxLeafVisits() const;
-
-  void set_maxLeafVisits(int maxLeafVisits);
-
   NodeItr Root() const;
 
   std::vector<LabelType> Knn(int k, DataItr const &point) const;
@@ -100,12 +96,10 @@ private:
                                std::pair<DistType, LabelType> const &b);
 
   void KnnRecurse(size_t k, DataItr const &point, NodeItr const &node,
-                  BoundedHeap<std::pair<DistType, LabelType>> &neighbors,
-                  int &leavesVisited) const;
+                  BoundedHeap<std::pair<DistType, LabelType>> &neighbors) const;
 
   size_t size_;
   int nVarianceSamples_{0};
-  int maxLeafVisits_{0};
   std::vector<Node> tree_{};
   std::function<DistType(DataItr const &, DataItr const &)> distFunc_;
   GetSplitDimImpl<Randomized, Dim, DataType> getSplitDimImpl_{};
@@ -308,20 +302,6 @@ void KDTree<Dim, Randomized, DataType, LabelType,
 
 template <size_t Dim, bool Randomized, typename DataType, typename LabelType,
           typename DistType>
-int KDTree<Dim, Randomized, DataType, LabelType, DistType>::maxLeafVisits()
-    const {
-  return maxLeafVisits_;
-}
-
-template <size_t Dim, bool Randomized, typename DataType, typename LabelType,
-          typename DistType>
-void KDTree<Dim, Randomized, DataType, LabelType, DistType>::set_maxLeafVisits(
-    int maxLeafVisits) {
-  maxLeafVisits_ = maxLeafVisits;
-}
-
-template <size_t Dim, bool Randomized, typename DataType, typename LabelType,
-          typename DistType>
 typename KDTree<Dim, Randomized, DataType, LabelType, DistType>::TreeItr
 KDTree<Dim, Randomized, DataType, LabelType, DistType>::BuildTree(
     DataContainer const &points, LabelContainer const &labels,
@@ -351,15 +331,7 @@ template <size_t Dim, bool Randomized, typename DataType, typename LabelType,
           typename DistType>
 void KDTree<Dim, Randomized, DataType, LabelType, DistType>::KnnRecurse(
     const size_t k, DataItr const &point, NodeItr const &node,
-    BoundedHeap<std::pair<DistType, LabelType>> &neighbors,
-    int &leavesVisited) const {
-
-  // Approximate version
-  if (neighbors.size() >= k && maxLeafVisits_ > 0 &&
-      leavesVisited > maxLeafVisits_) {
-    return;
-  }
-  ++leavesVisited;
+    BoundedHeap<std::pair<DistType, LabelType>> &neighbors) const {
 
   neighbors.TryPush(
       std::make_pair(distFunc_(point, node.value()), *node.label()));
@@ -368,12 +340,12 @@ void KDTree<Dim, Randomized, DataType, LabelType, DistType>::KnnRecurse(
     if (doLeft) {
       const auto left = node.Left();
       if (left.inBounds()) {
-        KnnRecurse(k, point, left, neighbors, leavesVisited);
+        KnnRecurse(k, point, left, neighbors);
       }
     } else {
       const auto right = node.Right();
       if (right.inBounds()) {
-        KnnRecurse(k, point, right, neighbors, leavesVisited);
+        KnnRecurse(k, point, right, neighbors);
       }
     }
   };
@@ -398,8 +370,7 @@ std::vector<LabelType>
 KDTree<Dim, Randomized, DataType, LabelType, DistType>::Knn(
     const int k, DataItr const &point) const {
   BoundedHeap<std::pair<DistType, LabelType>> neighbors(k, CompareNeighbors);
-  int leavesVisited = 0;
-  KnnRecurse(k, point, Root(), neighbors, leavesVisited);
+  KnnRecurse(k, point, Root(), neighbors);
   // Sort according to lowest distance
   auto heapContent = neighbors.Destroy();
   std::sort_heap(heapContent.begin(), heapContent.end(), CompareNeighbors);

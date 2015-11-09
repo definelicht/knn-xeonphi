@@ -4,8 +4,9 @@
 #include "knn/Timer.h"
 #include <fstream>
 #include <iostream>
-#include <unordered_map>
+#include <istream>
 #include <string>
+#include <unordered_map>
 
 using namespace knn;
 
@@ -77,7 +78,6 @@ int main(int argc, char const *argv[]) {
   std::cout << "Building kd-tree... ";
   timer.Start();
   KDTree<128, false, float, int, float> kdTree(train, labels, distFunc);
-  // kdTree.set_maxLeafVisits(100);
   elapsed = timer.Stop();
   std::cout << "Done in " << elapsed << " seconds.\n";
   std::cout << "Classifying using kd-tree... ";
