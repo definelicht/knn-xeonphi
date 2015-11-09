@@ -1,6 +1,6 @@
 #include "knn/BinaryIO.h"
 #include "knn/KDTree.h"
-#include "knn/KnnLinear.h"
+#include "knn/Knn.h"
 #include "knn/Timer.h"
 #include <fstream>
 #include <iostream>
@@ -68,21 +68,20 @@ int main(int argc, char const *argv[]) {
   double elapsed = timer.Stop();
   std::cout << "Done in " << elapsed << " seconds.\n";
 
-  KnnLinear<float, int, float, 128> linear(train, labels, distFunc);
   std::cout << "Nearest neighbors using linear search... ";
   timer.Start();
-  auto resultLinear = linear.Knn(k, test);
+  auto resultLinear = KnnLinear<128, float>(train, labels, k, test, distFunc);
   elapsed = timer.Stop();
   std::cout << "Done in " << elapsed << " seconds.\n";
 
   std::cout << "Building kd-tree... ";
   timer.Start();
-  KDTree<128, false, float, int, float> kdTree(train, labels, distFunc);
+  KDTree<128, false, float, int> kdTree(train, labels);
   elapsed = timer.Stop();
   std::cout << "Done in " << elapsed << " seconds.\n";
   std::cout << "Classifying using kd-tree... ";
   timer.Start();
-  auto resultKdTree = kdTree.Knn(k, test);
+  auto resultKdTree = KnnExact<128, float>(kdTree, k, test, distFunc);
   elapsed = timer.Stop();
   std::cout << "Done in " << elapsed << " seconds.\n";
 
