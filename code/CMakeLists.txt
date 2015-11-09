@@ -24,6 +24,9 @@ set(KNN_TEST_SRC
   TestBinaryIO.cc
   TestBoundedHeap.cc)
 
+# Enable CTest for testing
+enable_testing()
+
 set(KNN_SRC_PATHS)
 foreach(SRC_FILE ${KNN_SRC})
   set(KNN_SRC_PATHS ${KNN_SRC_PATHS}
@@ -36,6 +39,8 @@ endforeach()
 foreach(SRC_FILE ${KNN_TEST_SRC})
   set(KNN_EXEC_PATHS ${KNN_EXEC_PATHS}
       ${CMAKE_CURRENT_SOURCE_DIR}/tests/${SRC_FILE})
+  get_filename_component(TEST_FILE_NAME ${SRC_FILE} NAME_WE)
+  add_test(${TEST_FILE_NAME} ${TEST_FILE_NAME})
 endforeach()
 
 add_library(knn ${KNN_SRC_PATHS})
