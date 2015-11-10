@@ -76,58 +76,83 @@ void KnnExactRecurse(
     std::function<DistType(DataItr<DataType> const &,
                            DataItr<DataType> const &)> distFunc) {
 
-  auto value = node.value();
-  neighbors.TryPush(std::make_pair(distFunc(query, value), node.index()));
+  const auto value = node.value();
 
-  auto traverseSubtree = [&](bool doLeft) {
-    if (doLeft) {
-      const auto left = node.Left();
-      if (left.inBounds()) {
-        KnnExactRecurse<Dim, DistType, DataType>(left, k, query, neighbors,
-                                                 distFunc);
-      }
-    } else {
-      const auto right = node.Right();
-      if (right.inBounds()) {
-        KnnExactRecurse<Dim, DistType, DataType>(right, k, query, neighbors,
-                                                 distFunc);
-      }
-    }
-  };
+  const auto leftChild = node.Left();
+  const auto rightChild = node.Right();
+  if (!leftChild.inBounds() && !rightChild.inBounds()) {
+    // This is a leaf
+    neighbors.TryPush(std::make_pair(distFunc(query, value), node.index()));
+    return;
+  }
 
-  // Recurse the subtree with the highest intersection
-  const size_t splitDim = node.splitDim();
+  const auto splitDim = node.splitDim();
   const bool doLeft = query[splitDim] < value[splitDim];
-  traverseSubtree(doLeft);
+  const auto &bestChild = doLeft ? leftChild : rightChild;
+  const auto &otherChild = doLeft ? rightChild : leftChild;
 
-  // If the longest nearest neighbor hypersphere crosses the splitting
-  // hyperplane after traversing the subtree with the highest intersection, we
+  // Explore best branch first
+  KnnExactRecurse<Dim, DistType, DataType>(bestChild, k, query, neighbors,
+                                           distFunc);
+
+  // Now explore the other branch if necessary
   if (std::abs(value[splitDim] - query[splitDim]) <
           neighbors.PeekFront().first ||
       neighbors.size() < k) {
-    traverseSubtree(!doLeft);
+    KnnExactRecurse<Dim, DistType, DataType>(otherChild, k, query, neighbors,
+                                             distFunc);
   }
 }
 
-// template <size_t Dim, typename DistType, typename DataType, typename
-// LabelType>
-// std::vector<LabelType> KnnApproximateRecurse(
-//     typename KDTree<Dim, true, DataType, LabelType>::NodeItr const &root,
-//     const int k, const int maxLeaves, DataItr<DataType> const &query,
-//     std::function<DistType(DataItr<DataType> const &,
-//                            DataItr<DataType> const &)> distFunc,
-//     BoundedHeap<true, std::pair<DistType, typename KDTree<Dim, true,
-//     DataType,
-//                                                           LabelType>::NodeItr>>
-//         &bestBins,
-//     std::vector<bool> &binsChecked, BoundedHeap<DistType, LabelType>
-//     &neighbors,
-//     int &leavesSearched) {
-//
-//   // Check if this branch has already been searched
-//   if (checked[std::distance(
-//
-// }
+template <size_t Dim, typename DistType, typename DataType>
+void KnnApproximateRecurse(
+    typename KDTree<Dim, true, DataType>::NodeItr const &node, const int k,
+    const int maxLeaves, DataItr<DataType> const &query,
+    std::function<DistType(DataItr<DataType> const &,
+                           DataItr<DataType> const &)> distFunc,
+    BoundedHeap<
+        std::pair<DistType, typename KDTree<Dim, true, DataType>::NodeItr>,
+        true> &bestBins,
+    std::vector<bool> &binsChecked,
+    BoundedHeap<std::pair<DistType, size_t>, true> &neighbors,
+    int &nSearched) {
+
+  if (nSearched >= maxLeaves) {
+    return;
+  }
+
+  // Extract node content
+  const auto value = node.value();
+  const auto index = node.index();
+
+  // Check if this is a leaf node
+  const auto leftChild = node.Left();
+  const auto rightChild = node.Right();
+  if (!leftChild.inBounds() && !rightChild.inBounds()) {
+    if (!binsChecked[index]) {
+      neighbors.TryPush(distFunc(query, value), index);
+      binsChecked[index] = true;
+      ++nSearched;
+    }
+    return;
+  }
+  // Recurse the best child and add the other child to the priority queue by its
+  // distance in the split dimension
+  const size_t splitDim = node.splitDim();
+  const bool doLeft = query[splitDim] < value[splitDim];
+  const auto &bestChild = doLeft ? leftChild : rightChild;
+  const auto &otherChild = doLeft ? rightChild : leftChild;
+  if (otherChild.inBounds()) {
+    bestBins.TryPush(std::make_pair(std::abs(value[splitDim] - query[splitDim]),
+                                    otherChild));
+  }
+  if (bestChild.inBounds()) {
+    KnnApproximateRecurse<Dim, DistType, DataType>(
+        bestChild, k, maxLeaves, query, distFunc, bestBins, binsChecked,
+        neighbors, nSearched);
+  }
+
+}
 
 } // End anonymous namespace
 
@@ -199,29 +224,41 @@ KnnExact(KDTree<Dim, false, DataType> const &kdTree, const int k,
   return neighbors;
 }
 
-// template <size_t Dim, typename DistType, typename DataType>
-// std::vector<std::pair<DistType, size_t>> KnnApproximate(
-//     std::vector<KDTree<Dim, true, DataType, LabelType>> const &randTrees,
-//     const int k, const int maxLeaves, DataItr<DataType> const &query,
-//     std::function<DistType(DataItr<DataType> const &,
-//                            DataItr<DataType> const &)> distFunc) {
-// 
-//   // Initialization
-//   BoundedHeap<false, std::pair<DistType, typename KDTree<Dim, true, DataType,
-//                                                          LabelType>::NodeItr>>
-//       bestBins(maxLeaves,
-//                CompareNeighbors<DistType, typename KDTree<Dim, true, DataType,
-//                                                           LabelType>::NodeItr>);
-//   std::vector<bool> checked(randTrees[0].size(), true);
-//   BoundedHeap<true, std::pair<DistType, LabelType>> neighbors(k);
-//   int leavesSearched = 0;
-// 
-//   // Recurse to the bottom of each tree once
-//   for (int i = 0, iMax = randTrees.size(); i < iMax; ++i) {
-//     KnnApproximateRecurse<Dim, DistType>(randTrees, k, maxLeaves, query,
-//                                          distFunc, bestBins, checked, neighbors,
-//                                          leavesSearched);
-//   }
-// }
+template <size_t Dim, typename DistType, typename DataType>
+std::vector<std::pair<DistType, size_t>>
+KnnApproximate(std::vector<KDTree<Dim, true, DataType>> const &randTrees,
+               const int k, const int maxLeaves, DataItr<DataType> const &query,
+               std::function<DistType(DataItr<DataType> const &,
+                                      DataItr<DataType> const &)> distFunc) {
+
+  // Initialization
+  BoundedHeap<
+      std::pair<DistType, typename KDTree<Dim, true, DataType>::NodeItr>, false>
+      bestBins(maxLeaves,
+               CompareNeighbors<DistType,
+                                typename KDTree<Dim, true, DataType>::NodeItr>);
+  // Keep track of leaf nodes already inspected
+  std::vector<bool> binsChecked(randTrees[0].nLeaves(), true);
+  BoundedHeap<std::pair<DistType, size_t>, true> neighbors(k);
+  int nSearched = 0;
+
+  // Recurse to the bottom of each tree once
+  for (auto &randTree : randTrees) {
+    KnnApproximateRecurse<Dim, DistType>(randTree.Root(), k, maxLeaves, query,
+                                         distFunc, bestBins, binsChecked,
+                                         neighbors, nSearched);
+  }
+
+  // Now search throughout the proposed branches until search is exhausted or
+  // the maximum number of leaves is reached
+  auto branchToSearch = randTrees[0].Root(); 
+  while (nSearched < maxLeaves && bestBins.TryPop(branchToSearch)) {
+    KnnApproximateRecurse<Dim, DistType>(branchToSearch, k, maxLeaves, query,
+                                         distFunc, bestBins, binsChecked,
+                                         neighbors, nSearched);
+  }
+
+  return neighbors;
+}
 
 } // End namespace knn
