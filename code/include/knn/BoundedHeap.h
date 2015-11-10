@@ -22,6 +22,8 @@ public:
   /// If called on an empty heap the returned value is undefined.
   T PeekFront() const;
 
+  bool TryPop(T &elem);
+
   bool TryPush(T const &elem);
 
   /// Returns the data content of the heap, invalidating the instance of the
@@ -98,6 +100,17 @@ size_t BoundedHeap<T, EvictWhenFull>::maxSize() const {
 template <typename T, bool EvictWhenFull>
 T BoundedHeap<T, EvictWhenFull>::PeekFront() const {
   return content_[0];
+}
+
+template <typename T, bool EvictWhenFull>
+bool BoundedHeap<T, EvictWhenFull>::TryPop(T &elem) {
+  if (content_.size() > 0) {
+    elem = content_.front();
+    std::pop_heap(content_.begin(), content_.end(), comp_);
+    content_.pop_back();
+    return true;
+  }
+  return false;
 }
 
 template <typename T, bool EvictWhenFull>

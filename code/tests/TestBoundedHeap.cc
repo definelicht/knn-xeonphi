@@ -10,10 +10,15 @@ int main() {
   BoundedHeap<std::pair<float, int>, true> heapEvict(3, comp);
   BoundedHeap<std::pair<float, int>, false> heapNoEvict(3, comp);
 
+  std::pair<float, int> pop;
   assert(heapEvict.TryPush(std::make_pair(3, 3)));
   assert(heapEvict.PeekFront().second == 3);
   assert(heapEvict.TryPush(std::make_pair(2, 2)));
   assert(heapEvict.PeekFront().second == 3);
+  assert(heapEvict.TryPop(pop));
+  assert(pop.second == 3);
+  assert(heapEvict.PeekFront().second == 2);
+  assert(heapEvict.TryPush(std::make_pair(3, 3)));
   assert(heapEvict.TryPush(std::make_pair(4, 4)));
   assert(heapEvict.PeekFront().second == 4);
   assert(!heapEvict.TryPush(std::make_pair(5, 5)));

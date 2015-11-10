@@ -79,14 +79,29 @@ int main(int argc, char const *argv[]) {
   KDTree<128, false, float> kdTree(train);
   elapsed = timer.Stop();
   std::cout << "Done in " << elapsed << " seconds.\n";
-  std::cout << "Classifying using kd-tree... ";
+  std::cout << "Nearest neighbor search using one exact tree... ";
   timer.Start();
   auto resultKdTree = KnnExact<128, float>(kdTree, k, test, distFunc);
   elapsed = timer.Stop();
   std::cout << "Done in " << elapsed << " seconds.\n";
 
+  std::cout << "Building randomized trees... ";
+  timer.Start();
+  std::vector<KDTree<128, true, float>> trees{
+      {train}, {train}, {train}, {train}};
+  elapsed = timer.Stop();
+  std::cout << "Done in " << elapsed << " seconds.\n";
+  std::cout
+      << "Nearest neighbor search using 5 randomized approximate trees... ";
+  timer.Start();
+  auto resultRandomized =
+      KnnApproximate<128, float>(trees, k, 1000, test, distFunc);
+  elapsed = timer.Stop();
+  std::cout << "Done in " << elapsed << " seconds.\n";
+
   float equalLinear = 0;
   float equalKdTree = 0;
+  float equalRand = 0;
 
   timer.Start();
   auto sortByIndex = [](std::pair<float, size_t> const &a,
@@ -102,6 +117,8 @@ int main(int argc, char const *argv[]) {
     auto iLinearEnd = resultLinear[i].cend();
     auto iKd = resultKdTree[i].cbegin();
     auto iKdEnd = resultKdTree[i].cend();
+    auto iRand = resultRandomized[i].cbegin();
+    auto iRandEnd = resultRandomized[i].cend();
     for (auto iGt = groundTruth.cbegin() + i * k,
               iGtEnd = groundTruth.cend() + (i + 1) * k;
          iGt < iGtEnd; ++iGt) {
@@ -125,10 +142,21 @@ int main(int argc, char const *argv[]) {
         }
         ++iKd;
       }
+      while (iRand < iRandEnd) {
+        if (static_cast<int>(iRand->second) == *iGt) {
+          ++iRand;
+          equalRand += 1;
+          break;
+        } else if (static_cast<int>(iRand->second) > *iGt) {
+          break;
+        }
+        ++iRand;
+      }
     }
   }
   equalLinear /= nTest;
   equalKdTree /= nTest;
+  equalRand   /= nTest;
   elapsed = timer.Stop();
   std::cout << "Verification done in " << elapsed << " seconds.\n";
   std::cout << "Linear: " << equalLinear << " / " << nTest << " ("
@@ -136,6 +164,9 @@ int main(int argc, char const *argv[]) {
             << ") classified correctly on average.\n";
   std::cout << "kd-tree: " << equalKdTree << " / " << nTest << " ("
             << static_cast<float>(equalKdTree) / nTest
+            << ") classified correctly on average.\n";
+  std::cout << "Randomized kd-trees: " << equalRand << " / " << nTest << " ("
+            << static_cast<float>(equalRand) / nTest
             << ") classified correctly on average.\n";
 
   return 0;

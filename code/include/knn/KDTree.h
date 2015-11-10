@@ -108,7 +108,7 @@ public:
   size_t operator()(std::vector<DataType> const &variances) {
     std::vector<size_t> indices(variances.size());
     auto begin = indices.begin();
-    std::nth_element(begin, begin + nHighestVariances_, variances.end(),
+    std::nth_element(begin, begin + nHighestVariances_, indices.end(),
                      [&variances](size_t a, size_t b) {
                        return variances[a] < variances[b];
                      });
