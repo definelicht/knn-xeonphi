@@ -10,21 +10,30 @@ int main() {
   BoundedHeap<std::pair<float, int>, true> heapEvict(3, comp);
   BoundedHeap<std::pair<float, int>, false> heapNoEvict(3, comp);
 
+  auto evictAssume = [&](float high, float low) {
+    assert(heapEvict.Max().first == high);
+    assert(heapEvict.Min().first == low);
+  };
+  auto noEvictAssume = [&](float high, float low) {
+    assert(heapNoEvict.Max().first == high);
+    assert(heapNoEvict.Min().first == low);
+  };
+
   std::pair<float, int> pop;
   assert(heapEvict.TryPush(std::make_pair(3, 3)));
-  assert(heapEvict.PeekFront().second == 3);
+  evictAssume(3, 3);
   assert(heapEvict.TryPush(std::make_pair(2, 2)));
-  assert(heapEvict.PeekFront().second == 3);
-  assert(heapEvict.TryPop(pop));
+  evictAssume(3, 2);
+  assert(heapEvict.TryPopMax(pop));
   assert(pop.second == 3);
-  assert(heapEvict.PeekFront().second == 2);
+  evictAssume(2, 2);
   assert(heapEvict.TryPush(std::make_pair(3, 3)));
   assert(heapEvict.TryPush(std::make_pair(4, 4)));
-  assert(heapEvict.PeekFront().second == 4);
+  evictAssume(4, 2);
   assert(!heapEvict.TryPush(std::make_pair(5, 5)));
-  assert(heapEvict.PeekFront().second == 4);
+  evictAssume(4, 2);
   assert(heapEvict.TryPush(std::make_pair(1, 1)));
-  assert(heapEvict.PeekFront().second == 3);
+  evictAssume(3, 1);
   auto heapEvictContent = heapEvict.Destroy();
   std::sort_heap(heapEvictContent.begin(), heapEvictContent.end(), comp);
   assert(heapEvictContent[0].second == 1);
@@ -32,15 +41,15 @@ int main() {
   assert(heapEvictContent[2].second == 3);
 
   assert(heapNoEvict.TryPush(std::make_pair(3, 3)));
-  assert(heapNoEvict.PeekFront().second == 3);
+  noEvictAssume(3, 3);
   assert(heapNoEvict.TryPush(std::make_pair(2, 2)));
-  assert(heapNoEvict.PeekFront().second == 3);
+  noEvictAssume(3, 2);
   assert(heapNoEvict.TryPush(std::make_pair(4, 4)));
-  assert(heapNoEvict.PeekFront().second == 4);
+  noEvictAssume(4, 2);
   assert(!heapNoEvict.TryPush(std::make_pair(5, 5)));
-  assert(heapNoEvict.PeekFront().second == 4);
+  noEvictAssume(4, 2);
   assert(!heapNoEvict.TryPush(std::make_pair(1, 1)));
-  assert(heapNoEvict.PeekFront().second == 4);
+  noEvictAssume(4, 2);
   auto heapNoEvictContent = heapNoEvict.Destroy(); 
   std::sort_heap(heapNoEvictContent.begin(), heapNoEvictContent.end(), comp);
   assert(heapNoEvictContent[0].second == 2);
