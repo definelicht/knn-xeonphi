@@ -36,6 +36,7 @@ private:
 public:
   class NodeItr {
   public:
+    NodeItr();
     NodeItr(TreeItr const &node, bool inBounds);
     NodeItr Left() const;
     NodeItr Right() const;
@@ -66,11 +67,6 @@ private:
                     std::vector<size_t>::iterator begin,
                     std::vector<size_t>::iterator const &end);
 
-  std::vector<DataType>
-  Variance(DataContainer<DataType> const &data,
-           std::vector<size_t>::const_iterator begin,
-           std::vector<size_t>::const_iterator const &end);
-
   size_t nLeaves_;
   int nVarianceSamples_{0};
   std::vector<Node> tree_{};
@@ -86,7 +82,7 @@ namespace {
 template <size_t Dim, typename DataType>
 class GetSplitDimImpl<false, Dim, DataType> {
 public:
-  size_t operator()(std::vector<DataType> const &variances) {
+  size_t operator()(std::array<DataType, Dim> const &variances) {
     return std::distance(
         variances.cbegin(),
         std::max_element(variances.cbegin(), variances.cend()));
@@ -106,8 +102,9 @@ public:
                              : Dim;
   }
   int nHighestVariances() const { return nHighestVariances_; }
-  size_t operator()(std::vector<DataType> const &variances) {
-    std::vector<size_t> indices(variances.size());
+  size_t operator()(std::array<DataType, Dim> const &variances) {
+    std::array<size_t, Dim> indices;
+    std::iota(indices.begin(), indices.end(), 0);
     auto begin = indices.begin();
     std::nth_element(begin, begin + nHighestVariances_, indices.end(),
                      [&variances](size_t a, size_t b) {
@@ -148,6 +145,10 @@ KDTree<Dim, Randomized, DataType>::Node::Node(DataItr<DataType> const &_value,
                                               TreeItr const &_right)
     : value(_value), index(_index), splitDim(_splitDim), left(_left),
       right(_right) {}
+
+template <size_t Dim, bool Randomized, typename DataType>
+KDTree<Dim, Randomized, DataType>::NodeItr::NodeItr()
+    : node_(), inBounds_(false) {}
 
 template <size_t Dim, bool Randomized, typename DataType>
 KDTree<Dim, Randomized, DataType>::NodeItr::NodeItr(TreeItr const &node,
@@ -222,7 +223,8 @@ KDTree<Dim, Randomized, DataType>::BuildTree(
 
   const auto treeItr = tree_.end();
   if (std::distance(begin, end) > 1) {
-    const auto variances = Variance(points, begin, end);
+    const auto variances =
+        Variance<DataType, Dim>(points, nVarianceSamples_, begin, end);
     // Randomized/non-randomized machinery is hidden in getSplitDimImpl_
     const size_t splitDim = getSplitDimImpl_(variances);
     const size_t middle = std::distance(begin, end) / 2;
@@ -242,35 +244,6 @@ KDTree<Dim, Randomized, DataType>::BuildTree(
                        treeItr);
   }
   return treeItr;
-}
-
-template <size_t Dim, bool Randomized, typename DataType>
-std::vector<DataType> KDTree<Dim, Randomized, DataType>::Variance(
-    DataContainer<DataType> const &data,
-    std::vector<size_t>::const_iterator begin,
-    std::vector<size_t>::const_iterator const &end) {
-  std::vector<DataType> sum(Dim, 0);
-  std::vector<DataType> sumOfSquares(Dim, 0);
-  const int iMax = nVarianceSamples_ > 0
-                       ? std::min(nVarianceSamples_,
-                                  static_cast<int>(std::distance(begin, end)))
-                       : std::distance(begin, end);
-  for (int i = 0; i < iMax; ++i) {
-    const size_t pointIndex = Dim * (*begin);
-    for (unsigned j = 0; j < Dim; ++j) {
-      const DataType val = data[pointIndex + j];
-      sum[j] += val;
-      sumOfSquares[j] += val * val;
-    }
-    ++begin;
-  }
-  for (unsigned j = 0; j < Dim; ++j) {
-    // Reuse sumOfSquares vector for computing the variance. Don't divide by
-    // (N - 1) as this will only be used for intercomparison.
-    sumOfSquares[j] =
-        sumOfSquares[j] - (sum[j] * sum[j]) / iMax; // / (iMax - 1);
-  }
-  return sumOfSquares;
 }
 
 template <size_t Dim, bool Randomized, typename DataType>

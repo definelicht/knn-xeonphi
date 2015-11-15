@@ -33,18 +33,18 @@ KnnLinear(DataContainer<DataType> const &trainingPoints, int k,
                                  DataItr<DataType> const &)> distFunc);
 
 /// \brief Exact KNN using a kd-tree for search for a single query.
-template <size_t Dim, typename DistType, typename DataType>
+template <size_t Dim, bool Randomized, typename DistType, typename DataType>
 std::vector<std::pair<DistType, size_t>>
-KnnExact(KDTree<Dim, false, DataType> const &kdTree, int k,
+KnnExact(KDTree<Dim, Randomized, DataType> const &kdTree, int k,
          DataItr<DataType> const &query,
          std::function<DistType(DataItr<DataType> const &,
                                 DataItr<DataType> const &)> distFunc);
 
 /// \brief Exact KNN using a kd-tree for search for a multiple query.
 /// Accelerated using OpenMP if available.
-template <size_t Dim, typename DistType, typename DataType>
+template <size_t Dim, bool Randomized, typename DistType, typename DataType>
 std::vector<std::vector<std::pair<DistType, size_t>>>
-KnnExact(KDTree<Dim, false, DataType> const &kdTree, int k,
+KnnExact(KDTree<Dim, Randomized, DataType> const &kdTree, int k,
          DataContainer<DataType> const &queries,
          std::function<DistType(DataItr<DataType> const &,
                                 DataItr<DataType> const &)> distFunc);
@@ -69,16 +69,20 @@ KnnApproximate(std::vector<KDTree<Dim, true, DataType>> const &randTrees, int k,
 
 namespace {
 
-template <typename DistType, typename T>
+template <typename DistType, typename T, bool Negate = false>
 bool CompareNeighbors(std::pair<DistType, T> const &a,
                       std::pair<DistType, T> const &b) {
-  return a.first < b.first;
+  if (Negate) {
+    return a.first >= b.first;
+  } else {
+    return a.first < b.first;
+  }
 }
 
-template <size_t Dim, typename DistType, typename DataType>
+template <size_t Dim, bool Randomized, typename DistType, typename DataType>
 void KnnExactRecurse(
-    typename KDTree<Dim, false, DataType>::NodeItr const &node, const size_t k,
-    DataItr<DataType> const &query,
+    typename KDTree<Dim, Randomized, DataType>::NodeItr const &node,
+    const size_t k, DataItr<DataType> const &query,
     BoundedHeap<std::pair<DistType, size_t>, true> &neighbors,
     std::function<DistType(DataItr<DataType> const &,
                            DataItr<DataType> const &)> distFunc) {
@@ -99,15 +103,14 @@ void KnnExactRecurse(
   const auto &otherChild = doLeft ? rightChild : leftChild;
 
   // Explore best branch first
-  KnnExactRecurse<Dim, DistType, DataType>(bestChild, k, query, neighbors,
-                                           distFunc);
+  KnnExactRecurse<Dim, Randomized, DistType, DataType>(bestChild, k, query,
+                                                       neighbors, distFunc);
 
   // Now explore the other branch if necessary
-  if (std::abs(value[splitDim] - query[splitDim]) <
-          neighbors.PeekFront().first ||
+  if (std::abs(value[splitDim] - query[splitDim]) < neighbors.Max().first ||
       neighbors.size() < k) {
-    KnnExactRecurse<Dim, DistType, DataType>(otherChild, k, query, neighbors,
-                                             distFunc);
+    KnnExactRecurse<Dim, Randomized, DistType, DataType>(otherChild, k, query,
+                                                         neighbors, distFunc);
   }
 }
 
@@ -119,22 +122,23 @@ void KnnApproximateRecurse(
                            DataItr<DataType> const &)> distFunc,
     BoundedHeap<
         std::pair<DistType, typename KDTree<Dim, true, DataType>::NodeItr>,
-        false> &bestBins,
+        false> &branchesToCheck,
+    DistType minDistToBoundary,
     std::vector<bool> &binsChecked,
     BoundedHeap<std::pair<DistType, size_t>, true> &neighbors, int &nSearched) {
 
-  if (nSearched >= maxLeaves) {
+  if (neighbors.isFull() && nSearched >= maxLeaves &&
+      minDistToBoundary >= neighbors.Max().first) {
     return;
   }
 
-  // Extract node content
   const auto value = node.value();
-  const auto index = node.index();
 
   // Check if this is a leaf node
   const auto leftChild = node.Left();
   const auto rightChild = node.Right();
   if (!leftChild.inBounds() && !rightChild.inBounds()) {
+    const auto index = node.index();
     if (!binsChecked[index]) {
       neighbors.TryPush(std::make_pair(distFunc(query, value), index));
       binsChecked[index] = true;
@@ -142,23 +146,20 @@ void KnnApproximateRecurse(
     }
     return;
   }
-  // Recurse the best child and add the other child to the priority queue by its
-  // distance in the split dimension
+
   const size_t splitDim = node.splitDim();
   const bool doLeft = query[splitDim] < value[splitDim];
   const auto &bestChild = doLeft ? leftChild : rightChild;
   const auto &otherChild = doLeft ? rightChild : leftChild;
-  assert(bestChild.inBounds() && otherChild.inBounds());
-  if (otherChild.inBounds()) {
-    bestBins.TryPush(std::make_pair(
-        -std::abs(value[splitDim] - query[splitDim]), otherChild));
-  }
-  if (bestChild.inBounds()) {
-    KnnApproximateRecurse<Dim, DistType, DataType>(
-        bestChild, k, maxLeaves, query, distFunc, bestBins, binsChecked,
-        neighbors, nSearched);
-  }
-
+  const DistType minDistToBoundaryBranch =
+      minDistToBoundary + std::abs(value[splitDim] - query[splitDim]);
+  // Add the branch not taken to the list of potential branches by the
+  // accumulated minimum distance to that branch's boundary
+  branchesToCheck.TryPush(std::make_pair(minDistToBoundaryBranch, otherChild));
+  // Now continue recurse the most promising branch
+  KnnApproximateRecurse<Dim, DistType, DataType>(
+      bestChild, k, maxLeaves, query, distFunc, branchesToCheck,
+      minDistToBoundary, binsChecked, neighbors, nSearched);
 }
 
 } // End anonymous namespace
@@ -202,23 +203,23 @@ KnnLinear(DataContainer<DataType> const &trainingPoints, const int k,
   return neighbors;
 }
 
-template <size_t Dim, typename DistType, typename DataType>
+template <size_t Dim, bool Randomized, typename DistType, typename DataType>
 std::vector<std::pair<DistType, size_t>>
-KnnExact(KDTree<Dim, false, DataType> const &kdTree, const int k,
+KnnExact(KDTree<Dim, Randomized, DataType> const &kdTree, const int k,
          DataItr<DataType> const &query,
          std::function<DistType(DataItr<DataType> const &,
                                 DataItr<DataType> const &)> distFunc) {
   BoundedHeap<std::pair<DistType, size_t>, true> neighbors(
       k, CompareNeighbors<DistType, size_t>);
-  KnnExactRecurse<Dim, DistType, DataType>(kdTree.Root(), k, query, neighbors,
-                                           distFunc);
+  KnnExactRecurse<Dim, Randomized, DistType, DataType>(kdTree.Root(), k, query,
+                                                       neighbors, distFunc);
   auto heapContent = neighbors.Destroy();
   return heapContent;
 }
 
-template <size_t Dim, typename DistType, typename DataType>
+template <size_t Dim, bool Randomized, typename DistType, typename DataType>
 std::vector<std::vector<std::pair<DistType, size_t>>>
-KnnExact(KDTree<Dim, false, DataType> const &kdTree, const int k,
+KnnExact(KDTree<Dim, Randomized, DataType> const &kdTree, const int k,
          DataContainer<DataType> const &queries,
          std::function<DistType(DataItr<DataType> const &,
                                 DataItr<DataType> const &)> distFunc) {
@@ -238,22 +239,31 @@ KnnApproximate(std::vector<KDTree<Dim, true, DataType>> const &randTrees,
                std::function<DistType(DataItr<DataType> const &,
                                       DataItr<DataType> const &)> distFunc) {
 
-  // Initialization
-  BoundedHeap<
-      std::pair<DistType, typename KDTree<Dim, true, DataType>::NodeItr>, false>
-      bestBins(maxLeaves,
-               CompareNeighbors<DistType,
-                                typename KDTree<Dim, true, DataType>::NodeItr>);
+  // Iterator to nodes in the tree 
+  using TreeItr = typename KDTree<Dim, true, DataType>::NodeItr;
+  // A branch records the minimum distance from the point to any leaf in that
+  // branch, as well as an iterator to the node entry in the tree
+  using Branch = std::pair<DistType, TreeItr>;
+  // Use negated comparison in heap so lowest distances are at the top.
+  // When the heap is full, simply reject new values.
+  BoundedHeap<Branch, false> branchesToCheck(
+      maxLeaves, CompareNeighbors<DistType, TreeItr, true>);
   // Keep track of leaf nodes already inspected
   std::vector<bool> binsChecked(randTrees[0].nLeaves(), false);
+  // Heap of nearest neighbors. Top of the heap will be the highest distance
+  // found, but will keep track of the k lowest distances found.
+  // An entry is the distance to the neighbor and the neighbor's index in the
+  // training data set.
   BoundedHeap<std::pair<DistType, size_t>, true> neighbors(k);
+  // Count number of leaves searched as termination criterion
   int nSearched = 0;
 
-  // Recurse to the bottom of each tree once
+  // Recurse to the bottom of each randomized tree once to find the best bins in
+  // each, as well as the most promising branches to search next
   for (auto &randTree : randTrees) {
     KnnApproximateRecurse<Dim, DistType, DataType>(
-        randTree.Root(), k, maxLeaves, query, distFunc, bestBins, binsChecked,
-        neighbors, nSearched);
+        randTree.Root(), k, maxLeaves, query, distFunc, branchesToCheck, 0,
+        binsChecked, neighbors, nSearched);
   }
 
   // Now search throughout the proposed branches until search is exhausted or
@@ -261,10 +271,10 @@ KnnApproximate(std::vector<KDTree<Dim, true, DataType>> const &randTrees,
   auto branchToSearch =
       std::make_pair<float, typename KDTree<Dim, true, DataType>::NodeItr>(
           0, randTrees[0].Root());
-  while (nSearched < maxLeaves && bestBins.TryPop(branchToSearch)) {
+  while (nSearched < maxLeaves && branchesToCheck.TryPopMax(branchToSearch)) {
     KnnApproximateRecurse<Dim, DistType, DataType>(
-        branchToSearch.second, k, maxLeaves, query, distFunc, bestBins,
-        binsChecked, neighbors, nSearched);
+        branchToSearch.second, k, maxLeaves, query, distFunc, branchesToCheck,
+        branchToSearch.first, binsChecked, neighbors, nSearched);
   }
 
   auto heapContent = neighbors.Destroy();

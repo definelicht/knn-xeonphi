@@ -81,7 +81,7 @@ int main(int argc, char const *argv[]) {
   std::cout << "Done in " << elapsed << " seconds.\n";
   std::cout << "Nearest neighbor search using one exact tree... ";
   timer.Start();
-  auto resultKdTree = KnnExact<128, float>(kdTree, k, test, distFunc);
+  auto resultKdTree = KnnExact<128, false, float>(kdTree, k, test, distFunc);
   elapsed = timer.Stop();
   std::cout << "Done in " << elapsed << " seconds.\n";
 
@@ -95,7 +95,7 @@ int main(int argc, char const *argv[]) {
       << "Nearest neighbor search using 5 randomized approximate trees... ";
   timer.Start();
   auto resultRandomized =
-      KnnApproximate<128, float>(trees, k, 1000, test, distFunc);
+      KnnApproximate<128, float>(trees, k, 2000, test, distFunc);
   elapsed = timer.Stop();
   std::cout << "Done in " << elapsed << " seconds.\n";
 
@@ -113,6 +113,8 @@ int main(int argc, char const *argv[]) {
     std::sort(groundTruth.begin() + i * k, groundTruth.begin() + (i + 1) * k);
     std::sort(resultLinear[i].begin(), resultLinear[i].end(), sortByIndex);
     std::sort(resultKdTree[i].begin(), resultKdTree[i].end(), sortByIndex);
+    std::sort(resultRandomized[i].begin(), resultRandomized[i].end(),
+              sortByIndex);
     auto iLinear = resultLinear[i].cbegin();
     auto iLinearEnd = resultLinear[i].cend();
     auto iKd = resultKdTree[i].cbegin();

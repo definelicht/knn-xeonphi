@@ -19,10 +19,15 @@ public:
 
   size_t maxSize() const;
 
-  /// If called on an empty heap the returned value is undefined.
-  T PeekFront() const;
+  bool isFull() const;
 
-  bool TryPop(T &elem);
+  /// If called on an empty heap the returned value is undefined.
+  T Max() const;
+
+  /// If called on an empty heap the returned value is undefined.
+  T Min() const;
+
+  bool TryPopMax(T &elem);
 
   bool TryPush(T const &elem);
 
@@ -34,6 +39,7 @@ public:
 private:
   size_t maxSize_;
   std::vector<T> content_{};
+  T lowest_{};
   std::function<bool(T const &, T const &b)> comp_;
 };
 
@@ -53,8 +59,11 @@ struct EvictImpl<true, T> {
   EvictImpl<true, T>& operator=(EvictImpl<true, T> const &other) = delete;
   static bool
   PushWhenFull(std::function<bool(T const &, T const &)> const &comp,
-               std::vector<T> &content, T const &elem) {
+               T &back, std::vector<T> &content, T const &elem) {
     if (elem < content[0]) {
+      if (elem < back) {
+        back = elem;
+      }
       content[0] = elem;
       std::make_heap(content.begin(), content.end(), comp);
       return true;
@@ -69,7 +78,7 @@ struct EvictImpl<false, T> {
   EvictImpl(EvictImpl<false, T> const &other) = delete;
   EvictImpl<false, T>& operator=(EvictImpl<false, T> const &other) = delete;
   static bool PushWhenFull(std::function<bool(T const &, T const &)> const &,
-                           std::vector<T> &, T const &) {
+                           T const &, std::vector<T> const &, T const &) {
     return false;
   }
 };
@@ -97,16 +106,27 @@ size_t BoundedHeap<T, EvictWhenFull>::maxSize() const {
   return maxSize_;
 }
 
+
 template <typename T, bool EvictWhenFull>
-T BoundedHeap<T, EvictWhenFull>::PeekFront() const {
+bool BoundedHeap<T, EvictWhenFull>::isFull() const {
+  return content_.size() == maxSize_;
+}
+
+template <typename T, bool EvictWhenFull>
+T BoundedHeap<T, EvictWhenFull>::Max() const {
   return content_[0];
 }
 
 template <typename T, bool EvictWhenFull>
-bool BoundedHeap<T, EvictWhenFull>::TryPop(T &elem) {
+T BoundedHeap<T, EvictWhenFull>::Min() const {
+  return lowest_;
+}
+
+template <typename T, bool EvictWhenFull>
+bool BoundedHeap<T, EvictWhenFull>::TryPopMax(T &elem) {
   if (content_.size() > 0) {
-    elem = content_.front();
     std::pop_heap(content_.begin(), content_.end(), comp_);
+    elem = content_.back();
     content_.pop_back();
     return true;
   }
@@ -116,11 +136,15 @@ bool BoundedHeap<T, EvictWhenFull>::TryPop(T &elem) {
 template <typename T, bool EvictWhenFull>
 bool BoundedHeap<T, EvictWhenFull>::TryPush(T const &elem) {
   if (content_.size() < maxSize_) {
+    if (comp_(elem, lowest_) || content_.size() == 0) {
+      lowest_ = elem;
+    }
     content_.emplace_back(elem);
     std::push_heap(content_.begin(), content_.end(), comp_);
     return true;
   }
-  return EvictImpl<EvictWhenFull, T>::PushWhenFull(comp_, content_, elem);
+  return EvictImpl<EvictWhenFull, T>::PushWhenFull(comp_, lowest_, content_,
+                                                   elem);
 }
 
 template <typename T, bool EvictWhenFull>
