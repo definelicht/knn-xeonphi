@@ -35,6 +35,9 @@ private:
 public:
   class NodeItr {
   public:
+    NodeItr() = default;
+    NodeItr(const NodeItr& rhs) = default;
+    NodeItr& operator=(const NodeItr& rhs) = default;
     NodeItr(TreeItr const &node, bool inBounds);
     NodeItr Left() const;
     NodeItr Right() const;
