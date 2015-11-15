@@ -5,4 +5,5 @@
 *.pyc
 *.pdf
 build/
+myBuild/
 data/
