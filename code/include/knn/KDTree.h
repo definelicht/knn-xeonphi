@@ -21,8 +21,6 @@ template <size_t Dim, bool Randomized, typename DataType>
 class KDTree {
 
 private:
-  using TreeItr = typename std::vector<Node>::const_iterator;
-
   struct Node {
     DataItr<DataType> value;
     size_t index;
@@ -32,6 +30,7 @@ private:
          TreeItr const &_left,
          TreeItr const &_right);
   };
+  using TreeItr = typename std::vector<Node>::const_iterator;
 
 public:
   class NodeItr {
