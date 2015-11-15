@@ -31,7 +31,7 @@ std::array<T, Dim> Variance(std::vector<T> const &dataMatrix,
   std::fill(sum.begin(), sum.end(), 0);
   std::fill(sumOfSquares.begin(), sumOfSquares.end(), 0);
   const int iMax = nSamples > 0
-                       ? std::min(iMax,
+                       ? std::min(nSamples,
                                   static_cast<int>(std::distance(begin, end)))
                        : std::distance(begin, end);
   for (int i = 0; i < iMax; ++i, ++begin) {
