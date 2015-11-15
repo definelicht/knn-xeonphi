@@ -127,8 +127,8 @@ void KnnApproximateRecurse(
     std::vector<bool> &binsChecked,
     BoundedHeap<std::pair<DistType, size_t>, true> &neighbors, int &nSearched) {
 
-  if (neighbors.isFull() && nSearched >= maxLeaves &&
-      minDistToBoundary >= neighbors.Max().first) {
+  if (neighbors.isFull() &&
+      (nSearched >= maxLeaves || minDistToBoundary >= neighbors.Max().first)) {
     return;
   }
 
@@ -276,7 +276,7 @@ KnnApproximate(std::vector<KDTree<Dim, true, DataType>> const &randTrees,
         branchToSearch.second, k, maxLeaves, query, distFunc, branchesToCheck,
         branchToSearch.first, binsChecked, neighbors, nSearched);
   }
-
+  
   auto heapContent = neighbors.Destroy();
   return heapContent;
 }
