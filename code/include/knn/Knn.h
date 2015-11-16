@@ -1,7 +1,6 @@
 #pragma once
 
 #include <algorithm>
-#include <cassert>
 #include <cstdlib>
 #include <unordered_map>
 #include <vector>
@@ -119,12 +118,11 @@ void KnnApproximateRecurse(
     typename KDTree<Dim, true, DataType>::NodeItr const &node, const int k,
     const int maxLeaves, DataItr<DataType> const &query,
     std::function<DistType(DataItr<DataType> const &,
-                           DataItr<DataType> const &)> distFunc,
+                           DataItr<DataType> const &)> const &distFunc,
     BoundedHeap<
         std::pair<DistType, typename KDTree<Dim, true, DataType>::NodeItr>,
         false> &branchesToCheck,
-    DistType minDistToBoundary,
-    std::vector<bool> &binsChecked,
+    DistType minDistToBoundary, std::vector<bool> &binsChecked,
     BoundedHeap<std::pair<DistType, size_t>, true> &neighbors, int &nSearched) {
 
   if (neighbors.isFull() &&

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <cassert>
 #include <functional>
 #include <vector>
 
@@ -114,11 +115,13 @@ bool BoundedHeap<T, EvictWhenFull>::isFull() const {
 
 template <typename T, bool EvictWhenFull>
 T BoundedHeap<T, EvictWhenFull>::Max() const {
+  assert(content_.size() > 0);
   return content_[0];
 }
 
 template <typename T, bool EvictWhenFull>
 T BoundedHeap<T, EvictWhenFull>::Min() const {
+  assert(content_.size() > 0);
   return lowest_;
 }
 
@@ -136,7 +139,7 @@ bool BoundedHeap<T, EvictWhenFull>::TryPopMax(T &elem) {
 template <typename T, bool EvictWhenFull>
 bool BoundedHeap<T, EvictWhenFull>::TryPush(T const &elem) {
   if (content_.size() < maxSize_) {
-    if (comp_(elem, lowest_) || content_.size() == 0) {
+    if (content_.size() == 0 || (content_.size() > 0 && comp_(elem, lowest_))) {
       lowest_ = elem;
     }
     content_.emplace_back(elem);

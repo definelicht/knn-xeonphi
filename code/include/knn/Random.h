@@ -12,8 +12,6 @@ namespace knn {
   #if !__has_feature(cxx_thread_local)
     #undef CPPUTILS_RANDOM_THREADLOCAL
     #define CPPUTILS_RANDOM_THREADLOCAL
-    #warning "Random.h: No support for thread_local: random number generation \
-              is not thread safe."
   #endif
 #endif
 

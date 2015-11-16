@@ -87,15 +87,14 @@ int main(int argc, char const *argv[]) {
 
   std::cout << "Building randomized trees... ";
   timer.Start();
-  std::vector<KDTree<128, true, float>> trees{
-      {train}, {train}, {train}, {train}};
+  auto trees = KDTree<128, true, float>::BuildRandomizedTrees(train, 5, 100);
   elapsed = timer.Stop();
   std::cout << "Done in " << elapsed << " seconds.\n";
   std::cout
       << "Nearest neighbor search using 5 randomized approximate trees... ";
   timer.Start();
   auto resultRandomized =
-      KnnApproximate<128, float>(trees, k, 2000, test, distFunc);
+      KnnApproximate<128, float>(trees, k, 1000, test, distFunc);
   elapsed = timer.Stop();
   std::cout << "Done in " << elapsed << " seconds.\n";
 

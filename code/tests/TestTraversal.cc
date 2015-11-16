@@ -7,7 +7,10 @@
 
 using namespace knn;
 
-void Traverse(typename KDTree<8, true, float>::NodeItr itr,
+constexpr size_t n = 1<<14;
+constexpr size_t nDims = 128;
+
+void Traverse(typename KDTree<nDims, true, float>::NodeItr itr,
               std::vector<size_t> &indices) {
   if (!itr.inBounds()) {
     return;
@@ -28,8 +31,6 @@ void Traverse(typename KDTree<8, true, float>::NodeItr itr,
 }
 
 int main() {
-  constexpr size_t n = 1024;
-  constexpr size_t nDims = 8;
   std::vector<float> train(n*nDims);
   Uniform(train.begin(), train.end());
   KDTree<nDims, true, float> kdTree(train);

@@ -21,16 +21,17 @@ template <size_t Dim, bool Randomized, typename DataType>
 class KDTree {
 
 private:
+  struct Node;
+  using TreeItr = typename std::vector<Node>::const_iterator;
+
   struct Node {
     DataItr<DataType> value;
     size_t index;
     const size_t splitDim;
-    typename std::vector<Node>::const_iterator left, right;
+    TreeItr left, right;
     Node(DataItr<DataType> const &_value, size_t _index, size_t _splitDim,
-         typename std::vector<Node>::const_iterator const &_left,
-         typename std::vector<Node>::const_iterator const &_right);
+         TreeItr const &_left, TreeItr const &_right);
   };
-  using TreeItr = typename std::vector<Node>::const_iterator;
 
 public:
   class NodeItr {
@@ -51,6 +52,13 @@ public:
 
   KDTree(DataContainer<DataType> const &points);
 
+  KDTree(KDTree<Dim, Randomized, DataType> const &);
+
+  KDTree(KDTree<Dim, Randomized, DataType> &&);
+
+  KDTree<Dim, Randomized, DataType> &
+  operator=(KDTree<Dim, Randomized, DataType> const &) = delete;
+
   size_t nLeaves() const;
 
   constexpr size_t nDims() const;
@@ -60,6 +68,10 @@ public:
   void set_nVarianceSamples(int nVarianceSamples);
 
   NodeItr Root() const;
+
+  static std::vector<KDTree<Dim, true, DataType>>
+  BuildRandomizedTrees(DataContainer<DataType> const &points, int nTrees,
+                       int nVarianceSamples);
 
 private:
   TreeItr BuildTree(DataContainer<DataType> const &data,
@@ -140,6 +152,27 @@ KDTree<Dim, Randomized, DataType>::KDTree(DataContainer<DataType> const &points)
 }
 
 template <size_t Dim, bool Randomized, typename DataType>
+KDTree<Dim, Randomized, DataType>::KDTree(
+    KDTree<Dim, Randomized, DataType> const &other)
+    : nLeaves_(other.nLeaves_), nVarianceSamples_(other.nVarianceSamples_),
+      tree_(), getSplitDimImpl_() {
+  tree_.reserve(other.tree_.size());
+  const auto begin = tree_.cbegin();
+  const auto beginOther = other.tree_.cbegin();
+  for (auto &leaf : other.tree_) {
+    tree_.emplace_back(leaf.value, leaf.index, leaf.splitDim,
+                       begin + std::distance(beginOther, leaf.left),
+                       begin + std::distance(beginOther, leaf.right));
+  }
+}
+
+template <size_t Dim, bool Randomized, typename DataType>
+KDTree<Dim, Randomized, DataType>::KDTree(
+    KDTree<Dim, Randomized, DataType> &&other)
+    : nLeaves_(other.nLeaves_), nVarianceSamples_(other.nVarianceSamples_),
+      tree_(std::move(other.tree_)), getSplitDimImpl_() {}
+
+template <size_t Dim, bool Randomized, typename DataType>
 KDTree<Dim, Randomized, DataType>::Node::Node(DataItr<DataType> const &_value,
                                               size_t _index,
                                               const size_t _splitDim,
@@ -160,13 +193,13 @@ KDTree<Dim, Randomized, DataType>::NodeItr::NodeItr(TreeItr const &node,
 template <size_t Dim, bool Randomized, typename DataType>
 typename KDTree<Dim, Randomized, DataType>::NodeItr
 KDTree<Dim, Randomized, DataType>::NodeItr::Left() const {
-  return {node_->left, node_->left != node_};
+  return {node_->left, inBounds_ && node_->left != node_};
 }
 
 template <size_t Dim, bool Randomized, typename DataType>
 typename KDTree<Dim, Randomized, DataType>::NodeItr
 KDTree<Dim, Randomized, DataType>::NodeItr::Right() const {
-  return {node_->right, node_->right != node_};
+  return {node_->right, inBounds_ && node_->right != node_};
 }
 
 template <size_t Dim, bool Randomized, typename DataType>
@@ -246,6 +279,26 @@ KDTree<Dim, Randomized, DataType>::BuildTree(
                        treeItr);
   }
   return treeItr;
+}
+
+template <size_t Dim, bool Randomized, typename DataType>
+std::vector<KDTree<Dim, true, DataType>>
+KDTree<Dim, Randomized, DataType>::BuildRandomizedTrees(
+    DataContainer<DataType> const &points, const int nTrees,
+    const int nVarianceSamples) {
+  if (nTrees < 1) {
+    throw std::invalid_argument(
+        "BuildRandomizedTrees: number of trees must be >=0.");
+  }
+  std::vector<KDTree<Dim, true, DataType>> trees;
+  trees.reserve(nTrees);
+#pragma omp parallel for
+  for (int i = 0; i < nTrees; ++i) {
+    KDTree<Dim, true, DataType> tree(points);
+    tree.set_nVarianceSamples(nVarianceSamples);
+    trees.emplace_back(std::move(tree));
+  }
+  return trees;
 }
 
 template <size_t Dim, bool Randomized, typename DataType>
