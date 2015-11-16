@@ -23,6 +23,7 @@ set(KNN_APPS_SRC
 set(KNN_TEST_SRC
   TestBinaryIO.cc
   TestBoundedHeap.cc
+  TestTraversal.cc
   TestVariance.cc)
 
 # Enable CTest for testing
