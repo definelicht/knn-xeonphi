@@ -2,6 +2,8 @@
 
 #include <chrono>
 
+namespace knn {
+
 class Timer {
 
 public:
@@ -31,3 +33,5 @@ double Timer::Stop() {
 }
 
 double Timer::Elapsed() const { return elapsed_; }
+
+} // End namespace knn
