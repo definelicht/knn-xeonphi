@@ -22,14 +22,13 @@ template <typename T> int log2(T x) {
 }
 
 template <typename T, unsigned Dim>
-std::array<T, Dim> Variance(std::vector<T> const &dataMatrix,
-                            const int nSamples,
-                            std::vector<size_t>::const_iterator begin,
-                            std::vector<size_t>::const_iterator const &end) {
-  std::array<T, Dim> sum;
-  std::array<T, Dim> sumOfSquares;
-  std::fill(sum.begin(), sum.end(), 0);
-  std::fill(sumOfSquares.begin(), sumOfSquares.end(), 0);
+std::pair<std::array<T, Dim>, std::array<T, Dim>>
+MeanAndVariance(std::vector<T> const &dataMatrix, const int nSamples,
+                std::vector<size_t>::const_iterator begin,
+                const std::vector<size_t>::const_iterator end) {
+  std::pair<std::array<T, Dim>, std::array<T, Dim>> output;
+  std::fill(output.first.begin(), output.first.end(), 0);
+  std::fill(output.second.begin(), output.second.end(), 0);
   const int iMax = nSamples > 0
                        ? std::min(nSamples,
                                   static_cast<int>(std::distance(begin, end)))
@@ -38,18 +37,18 @@ std::array<T, Dim> Variance(std::vector<T> const &dataMatrix,
     size_t index = Dim * (*begin);
     for (unsigned j = 0; j < Dim; ++j, ++index) {
       const T val = dataMatrix[index];
-      sum[j] += val;
-      sumOfSquares[j] += val * val;
+      output.first[j] += val;
+      output.second[j] += val * val;
     }
   }
   const float iMaxInv = 1. / iMax;
   for (unsigned j = 0; j < Dim; ++j) {
-    // Reuse sumOfSquares vector for computing the variance. Don't divide by
-    // (N - 1) as this will only be used for intercomparison.
-    sumOfSquares[j] =
-        sumOfSquares[j] - (sum[j] * sum[j]) * iMaxInv; // / (iMax - 1);
+    // Don't divide by (N - 1) as this will only be used for intercomparison.
+    output.second[j] =
+        output.second[j] - (output.first[j] * output.first[j]) * iMaxInv;
+    output.first[j] *= iMaxInv;
   }
-  return sumOfSquares;
+  return output;
 }
 
 } // End namespace knn

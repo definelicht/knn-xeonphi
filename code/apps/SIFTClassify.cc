@@ -87,7 +87,8 @@ int main(int argc, char const *argv[]) {
 
   std::cout << "Building randomized trees... ";
   timer.Start();
-  auto trees = KDTree<128, true, float>::BuildRandomizedTrees(train, 5, 100);
+  auto trees = KDTree<128, true, float>::BuildRandomizedTrees(
+      train, 5, KDTree<128, true, float>::Pivot::median, 100);
   elapsed = timer.Stop();
   std::cout << "Done in " << elapsed << " seconds.\n";
   std::cout
