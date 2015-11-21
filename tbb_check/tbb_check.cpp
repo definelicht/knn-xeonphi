@@ -1,8 +1,8 @@
 #include <iostream>
 #include <vector>
 #include <random>
+#include <tbb/task_group.h>
 #include "Timer.h"
-#include "tbb/task_group.h"
 
 using namespace tbb;
 using namespace std;
@@ -12,21 +12,21 @@ class node
 public:
     node *right, *left;
     int data;
-    
+
     node(node * r,node *l,int d)
     {
         right = r;
         left = l;
         data = d;
     }
-    
+
     node(node &other)
     {
         right = other.right;
         left = other.left;
         data = other.data;
     }
-    
+
 };
 
 node *root = nullptr;
@@ -43,7 +43,7 @@ int Fib(int n);
 node * buildTree(vector<int>::iterator begin, vector<int>::iterator end, task_group &g)
 {
     int num = distance(begin,end);
-    
+
     if(num == 0) return nullptr;
     else if(num == 1)
     {
@@ -54,20 +54,20 @@ node * buildTree(vector<int>::iterator begin, vector<int>::iterator end, task_gr
     {
         int splitPos = num/2;
         std::nth_element(begin,begin+splitPos,end, [] (int i, int j) {return input[i] < input[j];});
-        
+
         node *temp = new node(nullptr,nullptr,input[*(begin+splitPos)]);
-        
-        
+
+
         //task_group g;
         g.run([&]{temp->left = buildTree(begin,begin+splitPos,g);});
         g.run([&]{temp->right = buildTree(begin+splitPos+1,end,g);});
         g.wait();
-        
+
         /*temp->left = buildTree(begin,begin+splitPos);
         temp->right = buildTree(begin+splitPos+1,end);*/
         return temp;
     }
-        
+
 }
 
 void print(node * p)
@@ -83,31 +83,31 @@ void print(node * p)
 int main()
 {
     task_group g;
-    
+
     std::fill(ind.begin(),ind.end(),0);
     for(int i=0;i<N;i++)
     {
         ind[i] = i;
     }
-    
+
     std::random_device rd;
     std::uniform_int_distribution<int> distribution(1,N*10);
-    
+
     for(int i=0;i<N;i++)
     {
         int k = distribution(rd);
         input.push_back(k);
     }
-    
+
     /*
     cout<<"Input:";
     for(auto i=input.begin();i<input.end();i++)
     {
         cout<<*i<<" ";
     }*/
-    
+
     knn::Timer timer;
-    
+
     timer.Start();
     root = buildTree(ind.begin(),ind.end(),g);
     timer.Stop();
@@ -118,7 +118,7 @@ int main()
     {
         cout<<ind[i]<<" ";
     }
-    
+
     cout<<"\nTree(in-order):";
     print(root);
     cout<<endl;*/
