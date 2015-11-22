@@ -39,6 +39,7 @@ set(KNN_TEST_SRC
   TestBinaryIO.cc
   TestBoundedHeap.cc
   TestTraversal.cc
+  TestTreeBuildParallel.cpp
   TestVariance.cc)
 
 # Enable CTest for testing
@@ -66,5 +67,5 @@ set(KNN_LIBS ${KNN_LIBS} knn)
 foreach(EXEC_PATH ${KNN_EXEC_PATHS})
   get_filename_component(EXEC_FILE_NAME ${EXEC_PATH} NAME_WE)
   add_executable(${EXEC_FILE_NAME} ${EXEC_PATH})
-  target_link_libraries(${EXEC_FILE_NAME} knn)
+  target_link_libraries(${EXEC_FILE_NAME} knn tbb)
 endforeach()

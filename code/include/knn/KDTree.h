@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cassert>
 #include <algorithm>  // std::nth_element
 #include <functional> // std::function
 #include <numeric>    // std::iota
@@ -8,6 +9,7 @@
 #include <stdexcept> // std::invalid_argument
 #include <string>
 #include <vector>
+#include <tbb/task_group.h>
 #include "knn/BoundedHeap.h"
 #include "knn/Common.h"
 
@@ -25,9 +27,13 @@ private:
   using TreeItr = Node const*;
 
   struct alignas(64) Node {
+<<<<<<< 458cffe73642825ffe50c3b15bfa73a229ec55fc
     DataItr<T> value;
+=======
+    DataItr<DataType> value;
+>>>>>>> Implemented parallel tree builder using TBB
     size_t index;
-    const size_t splitDim;
+    size_t splitDim;
     TreeItr left, right;
     Node(DataItr<T> _value, size_t _index, size_t _splitDim,
          TreeItr _left = nullptr, TreeItr _right = nullptr);
@@ -56,8 +62,15 @@ public:
 
   KDTree();
 
+<<<<<<< 458cffe73642825ffe50c3b15bfa73a229ec55fc
   KDTree(DataContainer<T> const &points, Pivot pivot = Pivot::median,
          int nVarianceSamples = -1);
+=======
+  /* KDTree(DataContainer<DataType> const &points, Pivot pivot = Pivot::median, */
+  /*        int nVarianceSamples = -1, const bool parallel=false); */
+  KDTree(DataContainer<DataType> const &points, Pivot pivot = Pivot::median,
+         int nVarianceSamples = -1, const bool parallel=true);
+>>>>>>> Implemented parallel tree builder using TBB
 
   KDTree(KDTree<Dim, Randomized, T> const &);
 
@@ -87,6 +100,11 @@ private:
   TreeItr BuildTree(DataContainer<T> const &data, Pivot pivot,
                     std::vector<size_t>::iterator begin,
                     const std::vector<size_t>::iterator end);
+
+  TreeItr BuildTreeParallel(DataContainer<DataType> const &data, Pivot pivot,
+                    std::vector<size_t>::iterator begin,
+                    const std::vector<size_t>::iterator end,
+                    const size_t mamaID=0);
 
   size_t nLeaves_;
   int nVarianceSamples_{0};
@@ -148,11 +166,19 @@ private:
 template <size_t Dim, bool Randomized, typename T>
 KDTree<Dim, Randomized, T>::KDTree() : nLeaves_(0) {}
 
+<<<<<<< 458cffe73642825ffe50c3b15bfa73a229ec55fc
 template <size_t Dim, bool Randomized, typename T>
 KDTree<Dim, Randomized, T>::KDTree(DataContainer<T> const &points, Pivot pivot,
                                    int nVarianceSamples)
+=======
+template <size_t Dim, bool Randomized, typename DataType>
+KDTree<Dim, Randomized, DataType>::KDTree(DataContainer<DataType> const &points,
+                                          Pivot pivot, int nVarianceSamples,
+                                          const bool parallel)
+>>>>>>> Implemented parallel tree builder using TBB
     : nLeaves_(Dim > 0 ? points.size() / Dim : 0),
-      nVarianceSamples_(nVarianceSamples) {
+      nVarianceSamples_(nVarianceSamples)
+{
   static_assert(Dim > 0, "KDTree data cannot be zero-dimensional.");
   if (nLeaves_ == 0) {
     throw std::invalid_argument("KDTree received empty data set.");
@@ -160,10 +186,15 @@ KDTree<Dim, Randomized, T>::KDTree(DataContainer<T> const &points, Pivot pivot,
   if (points.size() % Dim != 0) {
     throw std::invalid_argument("KDTree received unbalanced data.");
   }
-  tree_.reserve(log2(nLeaves_)*nLeaves_);
+  /* TODO: (fabianw; Sat Nov 21 16:16:17 2015) these are too many */
+  /* tree_.reserve(log2(nLeaves_)*nLeaves_); */
+  tree_.reserve(2*nLeaves_-1); // exact number of nodes if points are not consumed until leaf is reached, is tree is evenly split, always odd
   std::vector<size_t> indices(nLeaves_);
   std::iota(indices.begin(), indices.end(), 0);
-  BuildTree(points, pivot, indices.begin(), indices.end());
+  if (!parallel)
+      BuildTree(points, pivot, indices.begin(), indices.end());
+  else
+      BuildTreeParallel(points, pivot, indices.begin(), indices.end());
 }
 
 template <size_t Dim, bool Randomized, typename T>
@@ -311,7 +342,7 @@ KDTree<Dim, Randomized, T>::BuildTree(DataContainer<T> const &points,
     // Randomized/non-randomized machinery is hidden in getSplitDimImpl_
     const size_t splitDim = getSplitDimImpl_(meanAndVariance.second);
     size_t splitPivot;
-    if (pivot == Pivot::median) { 
+    if (pivot == Pivot::median) {
       splitPivot = std::distance(begin, end) / 2;
       std::nth_element(begin, begin + splitPivot, end, [&points, &splitDim](
                                                            size_t a, size_t b) {
@@ -328,13 +359,67 @@ KDTree<Dim, Randomized, T>::BuildTree(DataContainer<T> const &points,
     const size_t splitIndex = begin[splitPivot];
     tree_.emplace_back(points.data() + Dim * splitIndex, splitIndex, splitDim);
     // Points are not consumed before a leaf is reached
-    treeItr->left = BuildTree(points, pivot, begin, begin + splitPivot);
+    treeItr->left  = BuildTree(points, pivot, begin, begin + splitPivot);
     treeItr->right = BuildTree(points, pivot, begin + splitPivot, end);
   } else {
     // Leaf node
     tree_.emplace_back(points.data() + Dim * (*begin), *begin, 0);
   }
   return treeItr;
+}
+
+
+template <size_t Dim, bool Randomized, typename DataType>
+typename KDTree<Dim, Randomized, DataType>::TreeItr
+KDTree<Dim, Randomized, DataType>::BuildTreeParallel(
+    DataContainer<DataType> const &points, Pivot pivot,
+    std::vector<size_t>::iterator begin,
+    const std::vector<size_t>::iterator end,
+    const size_t mamaID)
+{
+    const auto mySelf = tree_.cbegin() + mamaID;
+
+    if (std::distance(begin, end) > 1) {
+        const auto meanAndVariance =
+        MeanAndVariance<DataType, Dim>(points, nVarianceSamples_, begin, end);
+        // Randomized/non-randomized machinery is hidden in getSplitDimImpl_
+        const size_t splitDim = getSplitDimImpl_(meanAndVariance.second);
+        size_t splitPivot;
+        if (pivot == Pivot::median) {
+            splitPivot = std::distance(begin, end) / 2;
+            std::nth_element(begin, begin + splitPivot, end, [&points, &splitDim](
+                        size_t a, size_t b) {
+                    return points[Dim * a + splitDim] < points[Dim * b + splitDim];
+                    });
+        } else {
+            const DataType splitMean = meanAndVariance.first[splitDim];
+            splitPivot = std::distance(
+                    begin, std::partition(begin, end,
+                        [&points, &splitDim, &splitMean](size_t i) {
+                        return points[Dim * i + splitDim] < splitMean;
+                        }));
+        }
+        const size_t splitIndex = begin[splitPivot];
+
+        tree_[mamaID] = Node(points.cbegin() + Dim * splitIndex, splitIndex, splitDim, mySelf, mySelf);
+
+        // Points are not consumed before a leaf is reached
+        size_t offset = 2*std::distance(begin, begin+splitPivot); // (2*nSubleaves - 1) + 1
+
+        tbb::task_group myGroup;
+        myGroup.run([&]{tree_[mamaID].left  = BuildTreeParallel(points, pivot, begin, begin + splitPivot, mamaID + 1);});
+        myGroup.run([&]{tree_[mamaID].right = BuildTreeParallel(points, pivot, begin + splitPivot, end, mamaID + offset);});
+        myGroup.wait();
+
+        /* tree_[mamaID].left  = BuildTreeParallel(points, pivot, begin, begin + splitPivot, mamaID + 1); */
+        /* tree_[mamaID].right = BuildTreeParallel(points, pivot, begin + splitPivot, end, mamaID + offset); */
+    }
+    else
+    {
+        // Leaf node, no babies
+        tree_[mamaID] = Node(points.cbegin() + Dim * (*begin), *begin, 0, mySelf, mySelf);
+    }
+    return mySelf;
 }
 
 template <size_t Dim, bool Randomized, typename T>
