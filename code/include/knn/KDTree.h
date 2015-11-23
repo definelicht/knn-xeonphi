@@ -24,7 +24,7 @@ private:
   struct Node;
   using TreeItr = typename std::vector<Node>::const_iterator;
 
-  struct Node {
+  alignas(64) struct Node {
     DataItr<DataType> value;
     size_t index;
     const size_t splitDim;
