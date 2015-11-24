@@ -9,7 +9,10 @@
 #include <stdexcept> // std::invalid_argument
 #include <string>
 #include <vector>
+#ifdef _USE_TBB_
 #include <tbb/task_group.h>
+#endif /* _USE_TBB_ */
+
 #include "knn/BoundedHeap.h"
 #include "knn/Common.h"
 
@@ -27,11 +30,7 @@ private:
   using TreeItr = Node const*;
 
   struct alignas(64) Node {
-<<<<<<< 458cffe73642825ffe50c3b15bfa73a229ec55fc
     DataItr<T> value;
-=======
-    DataItr<DataType> value;
->>>>>>> Implemented parallel tree builder using TBB
     size_t index;
     size_t splitDim;
     TreeItr left, right;
@@ -62,15 +61,8 @@ public:
 
   KDTree();
 
-<<<<<<< 458cffe73642825ffe50c3b15bfa73a229ec55fc
   KDTree(DataContainer<T> const &points, Pivot pivot = Pivot::median,
-         int nVarianceSamples = -1);
-=======
-  /* KDTree(DataContainer<DataType> const &points, Pivot pivot = Pivot::median, */
-  /*        int nVarianceSamples = -1, const bool parallel=false); */
-  KDTree(DataContainer<DataType> const &points, Pivot pivot = Pivot::median,
-         int nVarianceSamples = -1, const bool parallel=true);
->>>>>>> Implemented parallel tree builder using TBB
+         int nVarianceSamples = -1, const bool parallel=false);
 
   KDTree(KDTree<Dim, Randomized, T> const &);
 
@@ -166,16 +158,10 @@ private:
 template <size_t Dim, bool Randomized, typename T>
 KDTree<Dim, Randomized, T>::KDTree() : nLeaves_(0) {}
 
-<<<<<<< 458cffe73642825ffe50c3b15bfa73a229ec55fc
 template <size_t Dim, bool Randomized, typename T>
-KDTree<Dim, Randomized, T>::KDTree(DataContainer<T> const &points, Pivot pivot,
-                                   int nVarianceSamples)
-=======
-template <size_t Dim, bool Randomized, typename DataType>
-KDTree<Dim, Randomized, DataType>::KDTree(DataContainer<DataType> const &points,
+KDTree<Dim, Randomized, T>::KDTree(DataContainer<T> const &points,
                                           Pivot pivot, int nVarianceSamples,
                                           const bool parallel)
->>>>>>> Implemented parallel tree builder using TBB
     : nLeaves_(Dim > 0 ? points.size() / Dim : 0),
       nVarianceSamples_(nVarianceSamples)
 {
@@ -406,13 +392,15 @@ KDTree<Dim, Randomized, DataType>::BuildTreeParallel(
         // Points are not consumed before a leaf is reached
         size_t offset = 2*std::distance(begin, begin+splitPivot); // (2*nSubleaves - 1) + 1
 
+#ifdef _USE_TBB_
         tbb::task_group myGroup;
         myGroup.run([&]{tree_[mamaID].left  = BuildTreeParallel(points, pivot, begin, begin + splitPivot, mamaID + 1);});
         myGroup.run([&]{tree_[mamaID].right = BuildTreeParallel(points, pivot, begin + splitPivot, end, mamaID + offset);});
         myGroup.wait();
-
-        /* tree_[mamaID].left  = BuildTreeParallel(points, pivot, begin, begin + splitPivot, mamaID + 1); */
-        /* tree_[mamaID].right = BuildTreeParallel(points, pivot, begin + splitPivot, end, mamaID + offset); */
+#else
+        tree_[mamaID].left  = BuildTreeParallel(points, pivot, begin, begin + splitPivot, mamaID + 1);
+        tree_[mamaID].right = BuildTreeParallel(points, pivot, begin + splitPivot, end, mamaID + offset);
+#endif /* _USE_TBB_ */
     }
     else
     {
