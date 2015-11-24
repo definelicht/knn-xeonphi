@@ -387,7 +387,7 @@ KDTree<Dim, Randomized, T>::BuildTreeParallel(
         }
         const size_t splitIndex = begin[splitPivot];
 
-        *mySelf = Node(points.data() + Dim * splitIndex, splitIndex, splitDim, mySelf, mySelf);
+        *mySelf = Node(points.data() + Dim * splitIndex, splitIndex, splitDim);
 
         // Points are not consumed before a leaf is reached
         size_t offset = 2*std::distance(begin, begin+splitPivot); // (2*nSubleaves - 1) + 1
