@@ -23,6 +23,10 @@ if (TBB_FOUND)
   include_directories(AFTER SYSTEM ${TBB_INCLUDE_DIRS})
   set(KNN_LIBS ${KNN_LIBS} ${TBB_LIBRARIES})
 endif()
+if (TBB_MALLOC_PROXY_FOUND)
+  include_directories(AFTER SYSTEM ${TBB_MALLOC_PROXY_INCLUDE_DIRS})
+  set(KNN_LIBS ${KNN_LIBS} ${TBB_MALLOC_PROXY_LIBRARIES})
+endif()
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
