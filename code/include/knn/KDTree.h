@@ -9,7 +9,10 @@
 #include <stdexcept> // std::invalid_argument
 #include <string>
 #include <vector>
+#ifdef _USE_TBB_
 #include <tbb/task_group.h>
+#endif /* _USE_TBB_ */
+
 #include "knn/BoundedHeap.h"
 #include "knn/Common.h"
 
@@ -59,10 +62,8 @@ public:
 
   KDTree();
 
-  /* KDTree(DataContainer<DataType> const &points, Pivot pivot = Pivot::median, */
-  /*        int nVarianceSamples = -1, const bool parallel=false); */
   KDTree(DataContainer<DataType> const &points, Pivot pivot = Pivot::median,
-         int nVarianceSamples = -1, const bool parallel=true);
+         int nVarianceSamples = -1, const bool parallel=false);
 
   KDTree(KDTree<Dim, Randomized, DataType> const &);
 
@@ -389,13 +390,15 @@ KDTree<Dim, Randomized, DataType>::BuildTreeParallel(
         // Points are not consumed before a leaf is reached
         size_t offset = 2*std::distance(begin, begin+splitPivot); // (2*nSubleaves - 1) + 1
 
+#ifdef _USE_TBB_
         tbb::task_group myGroup;
         myGroup.run([&]{tree_[mamaID].left  = BuildTreeParallel(points, pivot, begin, begin + splitPivot, mamaID + 1);});
         myGroup.run([&]{tree_[mamaID].right = BuildTreeParallel(points, pivot, begin + splitPivot, end, mamaID + offset);});
         myGroup.wait();
-
-        /* tree_[mamaID].left  = BuildTreeParallel(points, pivot, begin, begin + splitPivot, mamaID + 1); */
-        /* tree_[mamaID].right = BuildTreeParallel(points, pivot, begin + splitPivot, end, mamaID + offset); */
+#else
+        tree_[mamaID].left  = BuildTreeParallel(points, pivot, begin, begin + splitPivot, mamaID + 1);
+        tree_[mamaID].right = BuildTreeParallel(points, pivot, begin + splitPivot, end, mamaID + offset);
+#endif /* _USE_TBB_ */
     }
     else
     {
