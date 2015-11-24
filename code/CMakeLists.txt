@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 2.8)
 project(knn)
 
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR}/cmake/modules/)
+
 find_package(Threads REQUIRED)
 set(KNN_LIBS ${KNN_LIBS} ${CMAKE_THREAD_LIBS_INIT})
 
@@ -9,9 +11,22 @@ if (OpenMP_FOUND OR OPENMP_FOUND)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 endif()
 
+find_package(Vc)
+if (Vc_FOUND)
+  include_directories(AFTER SYSTEM ${Vc_INCLUDE_DIR})
+  set(KNN_LIBS ${KNN_LIBS} ${Vc_LIBRARIES})
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DKNN_USE_VC")
+endif()
+
+find_package(TBB)
+if (TBB_FOUND)
+  include_directories(AFTER SYSTEM ${TBB_INCLUDE_DIRS})
+  set(KNN_LIBS ${KNN_LIBS} ${TBB_LIBRARIES})
+endif()
+
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1z -O3")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1z -O3 -march=native")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Weffc++")
 
 set(KNN_SRC
