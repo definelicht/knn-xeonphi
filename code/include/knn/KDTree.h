@@ -30,11 +30,7 @@ private:
   using TreeItr = Node const*;
 
   struct alignas(64) Node {
-<<<<<<< HEAD
     DataItr<T> value;
-=======
-    DataItr<DataType> value;
->>>>>>> 8d5d28f574756e30deee952896648311c712bb2e
     size_t index;
     size_t splitDim;
     TreeItr left, right;
@@ -65,11 +61,7 @@ public:
 
   KDTree();
 
-<<<<<<< HEAD
   KDTree(DataContainer<T> const &points, Pivot pivot = Pivot::median,
-=======
-  KDTree(DataContainer<DataType> const &points, Pivot pivot = Pivot::median,
->>>>>>> 8d5d28f574756e30deee952896648311c712bb2e
          int nVarianceSamples = -1, const bool parallel=false);
 
   KDTree(KDTree<Dim, Randomized, T> const &);
@@ -101,11 +93,7 @@ private:
                     std::vector<size_t>::iterator begin,
                     const std::vector<size_t>::iterator end);
 
-<<<<<<< HEAD
   TreeItr BuildTreeParallel(DataContainer<T> const &data, Pivot pivot,
-=======
-  TreeItr BuildTreeParallel(DataContainer<DataType> const &data, Pivot pivot,
->>>>>>> 8d5d28f574756e30deee952896648311c712bb2e
                     std::vector<size_t>::iterator begin,
                     const std::vector<size_t>::iterator end,
                     const size_t mamaID=0);
@@ -170,13 +158,8 @@ private:
 template <size_t Dim, bool Randomized, typename T>
 KDTree<Dim, Randomized, T>::KDTree() : nLeaves_(0) {}
 
-<<<<<<< HEAD
 template <size_t Dim, bool Randomized, typename T>
 KDTree<Dim, Randomized, T>::KDTree(DataContainer<T> const &points,
-=======
-template <size_t Dim, bool Randomized, typename DataType>
-KDTree<Dim, Randomized, DataType>::KDTree(DataContainer<DataType> const &points,
->>>>>>> 8d5d28f574756e30deee952896648311c712bb2e
                                           Pivot pivot, int nVarianceSamples,
                                           const bool parallel)
     : nLeaves_(Dim > 0 ? points.size() / Dim : 0),
