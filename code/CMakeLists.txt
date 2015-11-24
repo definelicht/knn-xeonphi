@@ -8,7 +8,7 @@ set(KNN_LIBS ${KNN_LIBS} ${CMAKE_THREAD_LIBS_INIT})
 
 find_package(OpenMP)
 if (OpenMP_FOUND OR OPENMP_FOUND)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DKNN_USE_OMP ${OpenMP_CXX_FLAGS}")
 endif()
 
 find_package(Vc)
@@ -44,8 +44,11 @@ set(KNN_TEST_SRC
   TestBinaryIO.cc
   TestBoundedHeap.cc
   TestTraversal.cc
-  TestTreeBuildParallel.cpp
   TestVariance.cc)
+
+if (OpenMP_FOUND)
+  set(KNN_TEST_SRC ${KNN_TEST_SRC} TestTreeBuildParallel.cpp)
+endif()
 
 # Enable CTest for testing
 enable_testing()
@@ -72,5 +75,5 @@ set(KNN_LIBS ${KNN_LIBS} knn)
 foreach(EXEC_PATH ${KNN_EXEC_PATHS})
   get_filename_component(EXEC_FILE_NAME ${EXEC_PATH} NAME_WE)
   add_executable(${EXEC_FILE_NAME} ${EXEC_PATH})
-  target_link_libraries(${EXEC_FILE_NAME} knn tbb)
+  target_link_libraries(${EXEC_FILE_NAME} ${KNN_LIBS})
 endforeach()

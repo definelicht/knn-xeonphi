@@ -131,8 +131,10 @@ int main(int argc, char** argv)
         std::cout << "Building kd-tree parallel... ";
         timer.Start();
         myTreeType kdTreeP(train, myTreeType::Pivot::median, -1, true);
-        elapsed = timer.Stop();
-        std::cout << "Done in " << elapsed << " seconds.\n";
+        double elapsedParallel = timer.Stop();
+        std::cout << "Done in " << elapsedParallel 
+                  << " seconds.\nSpeedup: " << elapsed / elapsedParallel
+                  << "\n";
     }
     return 0;
 #endif /* 0 */
