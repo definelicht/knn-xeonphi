@@ -8,8 +8,6 @@
 #include <string>
 #include <unordered_map>
 
-using namespace knn;
-
 template <typename T>
 std::vector<T> ReadTexMex(std::string const &path, const int dim,
                           const int maxQueries) {
@@ -44,16 +42,7 @@ int main(int argc, char const *argv[]) {
     nQueries = std::stoi(argv[5]);
   }
 
-  Timer timer;
-  auto distFunc = [](std::vector<float>::const_iterator const &a,
-                     std::vector<float>::const_iterator const &b) {
-    float dist = 0;
-    for (int i = 0; i < 128; ++i) {
-      float distDim = a[i] - b[i];
-      dist += distDim * distDim;
-    }
-    return dist;
-  };
+  knn::Timer timer;
 
   std::cout << "Reading data... ";
   timer.Start();
@@ -70,32 +59,36 @@ int main(int argc, char const *argv[]) {
 
   std::cout << "Nearest neighbors using linear search... ";
   timer.Start();
-  auto resultLinear = KnnLinear<128, float>(train, k, test, distFunc);
+  std::vector<float> a = {1,2,3,4};
+  std::vector<float> b = {5,6,7,8};
+  auto resultLinear = knn::KnnLinear<128, float, float>(
+      train, k, test, knn::SquaredEuclidianDistance<float, 128>);
   elapsed = timer.Stop();
   std::cout << "Done in " << elapsed << " seconds.\n";
 
   std::cout << "Building kd-tree... ";
   timer.Start();
-  KDTree<128, false, float> kdTree(train);
+  knn::KDTree<128, false, float> kdTree(train);
   elapsed = timer.Stop();
   std::cout << "Done in " << elapsed << " seconds.\n";
   std::cout << "Nearest neighbor search using one exact tree... ";
   timer.Start();
-  auto resultKdTree = KnnExact<128, false, float>(kdTree, k, test, distFunc);
+  auto resultKdTree = knn::KnnExact<128, false, float, float>(
+      kdTree, k, test, knn::SquaredEuclidianDistance<float, 128>);
   elapsed = timer.Stop();
   std::cout << "Done in " << elapsed << " seconds.\n";
 
   std::cout << "Building randomized trees... ";
   timer.Start();
-  auto trees = KDTree<128, true, float>::BuildRandomizedTrees(
-      train, 5, KDTree<128, true, float>::Pivot::median, 100);
+  auto trees = knn::KDTree<128, true, float>::BuildRandomizedTrees(
+      train, 5, knn::KDTree<128, true, float>::Pivot::median, 100);
   elapsed = timer.Stop();
   std::cout << "Done in " << elapsed << " seconds.\n";
   std::cout
       << "Nearest neighbor search using 5 randomized approximate trees... ";
   timer.Start();
-  auto resultRandomized =
-      KnnApproximate<128, float>(trees, k, 1000, test, distFunc);
+  auto resultRandomized = knn::KnnApproximate<128, float, float>(
+      trees, k, 1000, test, knn::SquaredEuclidianDistance<float, 128>);
   elapsed = timer.Stop();
   std::cout << "Done in " << elapsed << " seconds.\n";
 

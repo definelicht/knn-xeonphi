@@ -4,11 +4,14 @@
 #include <array>
 #include <stdint.h>
 #include <vector>
+#ifdef KNN_USE_VC
+#include <Vc/Vc>
+#endif
 
 namespace knn {
 
 template <typename T>
-using DataItr = typename std::vector<T>::const_iterator;
+using DataItr = T const*;
 
 template <typename T>
 using DataContainer = std::vector<T>;
@@ -49,6 +52,35 @@ MeanAndVariance(std::vector<T> const &dataMatrix, const int nSamples,
     output.first[j] *= iMaxInv;
   }
   return output;
+}
+
+template <typename T, int Dim>
+T SquaredEuclidianDistance(T const *__restrict__ const a,
+                           T const *__restrict__ const b) {
+  T dist = 0;
+#ifdef KNN_USE_VC
+  static constexpr int iMaxVec = Dim / Vc::Vector<T>::Size;
+  for (int i = 0; i < iMaxVec; i += Vc::Vector<T>::Size) {
+    Vc::Vector<T> lhs(a + i);
+    const Vc::Vector<T> rhs(b + i);
+    lhs -= rhs; 
+    lhs *= lhs;
+    dist += lhs.sum();
+  }
+  // Explicitly loop over the tail here instead of using the scalar
+  // implementation to avoid that the compiler unneccesarily autovectorizes the
+  // tail
+  for (int i = iMaxVec; i < Dim; ++i) {
+    T diff = a[i] - b[i];
+    dist += diff*diff;
+  }
+#else
+  for (int i = 0; i < Dim; ++i) {
+    T diff = a[i] - b[i];
+    dist += diff*diff;
+  }
+#endif
+  return dist;
 }
 
 } // End namespace knn
