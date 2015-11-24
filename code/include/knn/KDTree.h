@@ -93,7 +93,7 @@ private:
                     std::vector<size_t>::iterator begin,
                     const std::vector<size_t>::iterator end);
 
-  TreeItr BuildTreeParallel(DataContainer<DataType> const &data, Pivot pivot,
+  TreeItr BuildTreeParallel(DataContainer<T> const &data, Pivot pivot,
                     std::vector<size_t>::iterator begin,
                     const std::vector<size_t>::iterator end,
                     const size_t mamaID=0);
@@ -355,19 +355,19 @@ KDTree<Dim, Randomized, T>::BuildTree(DataContainer<T> const &points,
 }
 
 
-template <size_t Dim, bool Randomized, typename DataType>
-typename KDTree<Dim, Randomized, DataType>::TreeItr
-KDTree<Dim, Randomized, DataType>::BuildTreeParallel(
-    DataContainer<DataType> const &points, Pivot pivot,
+template <size_t Dim, bool Randomized, typename T>
+typename KDTree<Dim, Randomized, T>::TreeItr
+KDTree<Dim, Randomized, T>::BuildTreeParallel(
+    DataContainer<T> const &points, Pivot pivot,
     std::vector<size_t>::iterator begin,
     const std::vector<size_t>::iterator end,
     const size_t mamaID)
 {
-    const auto mySelf = tree_.cbegin() + mamaID;
+    const auto mySelf = tree_.data() + mamaID;
 
     if (std::distance(begin, end) > 1) {
         const auto meanAndVariance =
-        MeanAndVariance<DataType, Dim>(points, nVarianceSamples_, begin, end);
+        MeanAndVariance<T, Dim>(points, nVarianceSamples_, begin, end);
         // Randomized/non-randomized machinery is hidden in getSplitDimImpl_
         const size_t splitDim = getSplitDimImpl_(meanAndVariance.second);
         size_t splitPivot;
@@ -378,7 +378,7 @@ KDTree<Dim, Randomized, DataType>::BuildTreeParallel(
                     return points[Dim * a + splitDim] < points[Dim * b + splitDim];
                     });
         } else {
-            const DataType splitMean = meanAndVariance.first[splitDim];
+            const T splitMean = meanAndVariance.first[splitDim];
             splitPivot = std::distance(
                     begin, std::partition(begin, end,
                         [&points, &splitDim, &splitMean](size_t i) {
@@ -387,25 +387,25 @@ KDTree<Dim, Randomized, DataType>::BuildTreeParallel(
         }
         const size_t splitIndex = begin[splitPivot];
 
-        tree_[mamaID] = Node(points.cbegin() + Dim * splitIndex, splitIndex, splitDim, mySelf, mySelf);
+        *mySelf = Node(points.data() + Dim * splitIndex, splitIndex, splitDim, mySelf, mySelf);
 
         // Points are not consumed before a leaf is reached
         size_t offset = 2*std::distance(begin, begin+splitPivot); // (2*nSubleaves - 1) + 1
 
 #ifdef _USE_TBB_
         tbb::task_group myGroup;
-        myGroup.run([&]{tree_[mamaID].left  = BuildTreeParallel(points, pivot, begin, begin + splitPivot, mamaID + 1);});
-        myGroup.run([&]{tree_[mamaID].right = BuildTreeParallel(points, pivot, begin + splitPivot, end, mamaID + offset);});
+        myGroup.run([&]{mySelf->left  = BuildTreeParallel(points, pivot, begin, begin + splitPivot, mamaID + 1);});
+        myGroup.run([&]{mySelf->right = BuildTreeParallel(points, pivot, begin + splitPivot, end, mamaID + offset);});
         myGroup.wait();
 #else
-        tree_[mamaID].left  = BuildTreeParallel(points, pivot, begin, begin + splitPivot, mamaID + 1);
-        tree_[mamaID].right = BuildTreeParallel(points, pivot, begin + splitPivot, end, mamaID + offset);
+        mySelf->left  = BuildTreeParallel(points, pivot, begin, begin + splitPivot, mamaID + 1);
+        mySelf->right = BuildTreeParallel(points, pivot, begin + splitPivot, end, mamaID + offset);
 #endif /* _USE_TBB_ */
     }
     else
     {
         // Leaf node, no babies
-        tree_[mamaID] = Node(points.cbegin() + Dim * (*begin), *begin, 0, mySelf, mySelf);
+        *mySelf = Node(points.data() + Dim * (*begin), *begin, 0, mySelf, mySelf);
     }
     return mySelf;
 }
