@@ -24,6 +24,10 @@ if (TBB_FOUND)
   set(KNN_LIBS ${KNN_LIBS} ${TBB_LIBRARIES})
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_USE_TBB_")
 endif()
+if (TBB_MALLOC_PROXY_FOUND)
+  include_directories(AFTER SYSTEM ${TBB_MALLOC_PROXY_INCLUDE_DIRS})
+  set(KNN_LIBS ${KNN_LIBS} ${TBB_MALLOC_PROXY_LIBRARIES})
+endif()
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
