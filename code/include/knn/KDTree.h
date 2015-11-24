@@ -405,7 +405,7 @@ KDTree<Dim, Randomized, T>::BuildTreeParallel(
     else
     {
         // Leaf node, no babies
-        *mySelf = Node(points.data() + Dim * (*begin), *begin, 0, mySelf, mySelf);
+        *mySelf = Node(points.data() + Dim * (*begin), *begin, 0);
     }
     return mySelf;
 }
