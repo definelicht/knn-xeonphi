@@ -9,9 +9,8 @@
 #include <stdexcept> // std::invalid_argument
 #include <string>
 #include <vector>
-#ifdef _USE_TBB_
 #include <tbb/task_group.h>
-#endif /* _USE_TBB_ */
+#include <tbb/scalable_allocator.h>
 
 #include "knn/BoundedHeap.h"
 #include "knn/Common.h"
@@ -28,6 +27,8 @@ class KDTree {
 private:
   struct Node;
   using TreeItr = Node const*;
+  using IndexItr =
+      typename std::vector<size_t, tbb::scalable_allocator<size_t>>::iterator;
 
   struct alignas(64) Node {
     DataItr<T> value;
@@ -62,7 +63,7 @@ public:
   KDTree();
 
   KDTree(DataContainer<T> const &points, Pivot pivot = Pivot::median,
-         int nVarianceSamples = -1, const bool parallel=false);
+         int nVarianceSamples = -1, const bool parallel = true);
 
   KDTree(KDTree<Dim, Randomized, T> const &);
 
@@ -89,18 +90,16 @@ public:
                        Pivot pivot = Pivot::median, int nVarianceSamples = 100);
 
 private:
-  TreeItr BuildTree(DataContainer<T> const &data, Pivot pivot,
-                    std::vector<size_t>::iterator begin,
-                    const std::vector<size_t>::iterator end);
+  TreeItr BuildTree(DataContainer<T> const &data, Pivot pivot, IndexItr begin,
+                    const IndexItr end);
 
   TreeItr BuildTreeParallel(DataContainer<T> const &data, Pivot pivot,
-                    std::vector<size_t>::iterator begin,
-                    const std::vector<size_t>::iterator end,
-                    const size_t mamaID=0);
+                            IndexItr begin, const IndexItr end,
+                            const size_t mamaID = 0);
 
   size_t nLeaves_;
   int nVarianceSamples_{0};
-  std::vector<Node> tree_{};
+  std::vector<Node, tbb::scalable_allocator<Node>> tree_{};
   GetSplitDimImpl<Randomized, Dim, T> getSplitDimImpl_{};
 };
 
@@ -175,12 +174,13 @@ KDTree<Dim, Randomized, T>::KDTree(DataContainer<T> const &points,
   /* TODO: (fabianw; Sat Nov 21 16:16:17 2015) these are too many */
   /* tree_.reserve(log2(nLeaves_)*nLeaves_); */
   tree_.reserve(2*nLeaves_-1); // exact number of nodes if points are not consumed until leaf is reached, is tree is evenly split, always odd
-  std::vector<size_t> indices(nLeaves_);
+  std::vector<size_t, tbb::scalable_allocator<size_t>> indices(nLeaves_);
   std::iota(indices.begin(), indices.end(), 0);
-  if (!parallel)
-      BuildTree(points, pivot, indices.begin(), indices.end());
-  else
-      BuildTreeParallel(points, pivot, indices.begin(), indices.end());
+  if (!parallel) {
+    BuildTree(points, pivot, indices.begin(), indices.end());
+  } else {
+    BuildTreeParallel(points, pivot, indices.begin(), indices.end());
+  }
 }
 
 template <size_t Dim, bool Randomized, typename T>
@@ -317,9 +317,8 @@ void KDTree<Dim, Randomized, T>::set_nVarianceSamples(
 template <size_t Dim, bool Randomized, typename T>
 typename KDTree<Dim, Randomized, T>::TreeItr
 KDTree<Dim, Randomized, T>::BuildTree(DataContainer<T> const &points,
-                                      Pivot pivot,
-                                      std::vector<size_t>::iterator begin,
-                                      const std::vector<size_t>::iterator end) {
+                                      Pivot pivot, IndexItr begin,
+                                      const IndexItr end) {
 
   const auto treeItr = tree_.data() + tree_.size();
   if (std::distance(begin, end) > 1) {
@@ -354,15 +353,12 @@ KDTree<Dim, Randomized, T>::BuildTree(DataContainer<T> const &points,
   return treeItr;
 }
 
-
 template <size_t Dim, bool Randomized, typename T>
 typename KDTree<Dim, Randomized, T>::TreeItr
-KDTree<Dim, Randomized, T>::BuildTreeParallel(
-    DataContainer<T> const &points, Pivot pivot,
-    std::vector<size_t>::iterator begin,
-    const std::vector<size_t>::iterator end,
-    const size_t mamaID)
-{
+KDTree<Dim, Randomized, T>::BuildTreeParallel(DataContainer<T> const &points,
+                                              Pivot pivot, IndexItr begin,
+                                              const IndexItr end,
+                                              const size_t mamaID) {
     const auto mySelf = tree_.data() + mamaID;
 
     if (std::distance(begin, end) > 1) {

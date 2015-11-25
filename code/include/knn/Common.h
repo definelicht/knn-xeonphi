@@ -24,11 +24,10 @@ template <typename T> int log2(T x) {
   return highestBit;
 }
 
-template <typename T, unsigned Dim>
+template <typename T, unsigned Dim, typename IteratorType>
 std::pair<std::array<T, Dim>, std::array<T, Dim>>
 MeanAndVariance(std::vector<T> const &dataMatrix, const int nSamples,
-                std::vector<size_t>::const_iterator begin,
-                const std::vector<size_t>::const_iterator end) {
+                IteratorType begin, const IteratorType end) {
   std::pair<std::array<T, Dim>, std::array<T, Dim>> output;
   std::fill(output.first.begin(), output.first.end(), 0);
   std::fill(output.second.begin(), output.second.end(), 0);
