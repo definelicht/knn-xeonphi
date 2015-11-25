@@ -7,6 +7,7 @@
 #ifdef KNN_USE_VC
 #include <Vc/Vc>
 #endif
+#include <tbb/scalable_allocator.h>
 
 namespace knn {
 
@@ -15,6 +16,9 @@ using DataItr = T const*;
 
 template <typename T>
 using DataContainer = std::vector<T>;
+
+template <typename T>
+using ScalableVector = std::vector<T, tbb::scalable_allocator<T>>;
 
 template <typename T> int log2(T x) {
   int highestBit = 0;

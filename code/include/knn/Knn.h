@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <unordered_map>
 #include <vector>
+#include <tbb/parallel_for.h>
 #include "knn/BoundedHeap.h"
 #include "knn/Common.h"
 #include "knn/KDTree.h"
@@ -190,11 +191,10 @@ std::vector<std::vector<std::pair<DistType, size_t>>> KnnLinear(
     std::function<DistType(DataItr<DataType>, DataItr<DataType>)> distFunc) {
   const int nQueries = queries.size() / Dim;
   std::vector<std::vector<std::pair<DistType, size_t>>> neighbors(nQueries);
-#pragma omp parallel for
-  for (int i = 0; i < nQueries; ++i) {
+  tbb::parallel_for(0, nQueries, [&](int i) {
     neighbors[i] = KnnLinear<Dim, DistType, DataType>(
         trainingPoints, k, queries.data() + i * Dim, distFunc);
-  }
+  });
   return neighbors;
 }
 
@@ -220,10 +220,9 @@ KnnExact(KDTree<Dim, Randomized, DataType> const &kdTree, const int k,
                                 DataItr<DataType>)> distFunc) {
   const int nQueries = queries.size() / Dim;
   std::vector<std::vector<std::pair<DistType, size_t>>> neighbors(nQueries);
-#pragma omp parallel for
-  for (int i = 0; i < nQueries; ++i) {
+  tbb::parallel_for(0, nQueries, [&](int i) {
     neighbors[i] = KnnExact(kdTree, k, queries.data() + i * Dim, distFunc);
-  }
+  });
   return neighbors;
 }
 
@@ -283,11 +282,10 @@ std::vector<std::vector<std::pair<DistType, size_t>>> KnnApproximate(
     std::function<DistType(DataItr<DataType>, DataItr<DataType>)> distFunc) {
   const int nQueries = queries.size() / Dim;
   std::vector<std::vector<std::pair<DistType, size_t>>> neighbors(nQueries);
-#pragma omp parallel for
-  for (int i = 0; i < nQueries; ++i) {
+  tbb::parallel_for(0, nQueries, [&](int i) {
     neighbors[i] = KnnApproximate(randTrees, k, maxLeaves,
                                   queries.data() + i * Dim, distFunc);
-  }
+  });
   return neighbors;
 }
 

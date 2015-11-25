@@ -9,6 +9,7 @@
 #include <stdexcept> // std::invalid_argument
 #include <string>
 #include <vector>
+#include <tbb/parallel_for_each.h>
 #include <tbb/task_group.h>
 #include <tbb/scalable_allocator.h>
 
@@ -411,11 +412,10 @@ KDTree<Dim, Randomized, T>::BuildRandomizedTrees(
         "BuildRandomizedTrees: number of trees must be >=0.");
   }
   std::vector<KDTree<Dim, true, T>> trees(nTrees);
-#pragma omp parallel for
-  for (int i = 0; i < nTrees; ++i) {
-    KDTree<Dim, true, T> tree(points, pivot, nVarianceSamples);
-    trees[i] = std::move(tree);
-  }
+  tbb::parallel_for_each(
+      trees.begin(), trees.end(), [&](KDTree<Dim, true, T> &tree) {
+        tree = KDTree<Dim, true, T>(points, pivot, nVarianceSamples);
+      });
   return trees;
 }
 
