@@ -5,43 +5,23 @@
 #include <type_traits>
 
 namespace knn {
+namespace random {
 
 #define CPPUTILS_RANDOM_THREADLOCAL thread_local
 
-#ifdef __has_feature
-  #if !__has_feature(cxx_thread_local)
-    #undef CPPUTILS_RANDOM_THREADLOCAL
-    #define CPPUTILS_RANDOM_THREADLOCAL
-  #endif
-#endif
-
 typedef std::mt19937 DefaultRng;
-
-/// \brief Seed random number generator of the given type.
-template <typename RngType = DefaultRng, typename SeedType>
-void SetSeed(SeedType seed);
-
-/// \brief Fills the provided range with uniform random numbers, using the
-///        (optionally) specified random number generator.
-template <typename Iterator, typename RngType = DefaultRng>
-void Uniform(Iterator begin, Iterator end);
-
-/// \return A uniform random number.
-template <typename T, typename RngType = DefaultRng>
-T Uniform();
-
-////////////////////////////////////////////////////////////////////////////////
-// Implementations
-////////////////////////////////////////////////////////////////////////////////
 
 namespace {
 
-template <typename T, typename DistType = typename std::conditional<
-                          std::is_floating_point<T>::value,
-                          std::uniform_real_distribution<T>,
-                          std::uniform_int_distribution<T>>::type>
-DistType& UniformDist() {
-  static CPPUTILS_RANDOM_THREADLOCAL DistType dist;
+template <typename T>
+using DistType =
+    typename std::conditional<std::is_floating_point<T>::value,
+                              std::uniform_real_distribution<T>,
+                              std::uniform_int_distribution<T>>::type;
+
+template <typename T>
+DistType<T>& UniformDist() {
+  static CPPUTILS_RANDOM_THREADLOCAL DistType<T> dist;
   return dist;
 }
 
@@ -86,22 +66,27 @@ SeedToUnsigned(InputType seed) {
 
 } // End anonymous namespace
 
-template <typename RngType, typename SeedType>
+/// \brief Seed random number generator of the given type.
+template <typename RngType, typename SeedType = DefaultRng>
 void SetSeed(SeedType seed) {
   SharedRng<RngType>::wrapper().engine.seed(SeedToUnsigned<SeedType>(seed));
 }
 
-template <typename Iterator, typename RngType>
-void Uniform(Iterator begin, Iterator end) {
-  typedef typename std::iterator_traits<Iterator>::value_type T;
-  std::for_each(begin, end, [](T &tgt) { tgt = Uniform<T, RngType>(); });
-}
-
-template <typename T, typename RngType>
+/// \return A uniform random number.
+template <typename T, typename RngType = DefaultRng>
 T Uniform() {
   return UniformDist<T>()(SharedRng<RngType>::wrapper().engine);
 }
 
+/// \brief Fills the provided range with uniform random numbers, using the
+///        (optionally) specified random number generator.
+template <typename Iterator, typename RngType = DefaultRng>
+void FillUniform(Iterator begin, Iterator end) {
+  typedef typename std::iterator_traits<Iterator>::value_type T;
+  std::for_each(begin, end, [](T &tgt) { tgt = Uniform<T, RngType>(); });
+}
+
+} // End namespace random 
 } // End namespace knn 
 
 #undef CPPUTILS_RANDOM_THREADLOCAL

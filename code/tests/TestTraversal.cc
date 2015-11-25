@@ -32,7 +32,7 @@ void Traverse(typename KDTree<nDims, true, float>::NodeItr itr,
 
 int main() {
   std::vector<float> train(n*nDims);
-  Uniform(train.begin(), train.end());
+  random::FillUniform(train.begin(), train.end());
   KDTree<nDims, true, float> kdTree(train);
   std::vector<size_t> indices;
   indices.reserve(n);

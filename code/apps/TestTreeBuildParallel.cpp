@@ -126,7 +126,7 @@ int main(int argc, char** argv)
         using myTreeType = KDTree<128, false, float>;
         std::cout << "Building kd-tree seqential... ";
         timer.Start();
-        myTreeType kdTreeS(train, myTreeType::Pivot::median, -1, false);
+        myTreeType kdTreeS(train, myTreeType::Pivot::median, -1, -1, false);
         elapsed = timer.Stop();
         std::cout << "Done in " << elapsed << " seconds.\n";
     }
@@ -134,7 +134,7 @@ int main(int argc, char** argv)
         using myTreeType = KDTree<128, false, float>;
         std::cout << "Building kd-tree parallel... ";
         timer.Start();
-        myTreeType kdTreeP(train, myTreeType::Pivot::median, -1, true);
+        myTreeType kdTreeP(train, myTreeType::Pivot::median, -1, -1, true);
         double elapsedParallel = timer.Stop();
         std::cout << "Done in " << elapsedParallel 
                   << " seconds.\nSpeedup: " << elapsed / elapsedParallel
