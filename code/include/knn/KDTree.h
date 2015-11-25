@@ -388,15 +388,10 @@ KDTree<Dim, Randomized, T>::BuildTreeParallel(DataContainer<T> const &points,
         // Points are not consumed before a leaf is reached
         size_t offset = 2*std::distance(begin, begin+splitPivot); // (2*nSubleaves - 1) + 1
 
-#ifdef _USE_TBB_
         tbb::task_group myGroup;
         myGroup.run([&]{mySelf->left  = BuildTreeParallel(points, pivot, begin, begin + splitPivot, mamaID + 1);});
         myGroup.run([&]{mySelf->right = BuildTreeParallel(points, pivot, begin + splitPivot, end, mamaID + offset);});
         myGroup.wait();
-#else
-        mySelf->left  = BuildTreeParallel(points, pivot, begin, begin + splitPivot, mamaID + 1);
-        mySelf->right = BuildTreeParallel(points, pivot, begin + splitPivot, end, mamaID + offset);
-#endif /* _USE_TBB_ */
     }
     else
     {

@@ -4,7 +4,9 @@
 #include <fstream>
 #include <string>
 #include <vector>
+#ifdef KNN_USE_OMP
 #include <omp.h>
+#endif
 #include "knn/BinaryIO.h"
 #include "knn/KDTree.h"
 #include "knn/Random.h"
@@ -14,7 +16,7 @@ using namespace std;
 using namespace knn;
 
 /* constexpr size_t n = 1<<1; */
-constexpr size_t n = 4;
+// constexpr size_t n = 4;
 /* constexpr size_t nDims = 128; */
 constexpr size_t nDims = 2;
 
@@ -99,6 +101,7 @@ int main(int argc, char** argv)
         return 1;
     }
 
+#ifdef KNN_USE_OMP
     int nThreads, maxThreads;
 #pragma omp parallel
     {
@@ -108,10 +111,11 @@ int main(int argc, char** argv)
             maxThreads = omp_get_max_threads();
         }
     }
+    cout << "Threads = " << nThreads << " out of " << maxThreads << endl;
+#endif
 
     Timer timer;
 
-    cout << "Threads = " << nThreads << " out of " << maxThreads << endl;
 
     std::cout << "Reading data... ";
     timer.Start();

@@ -22,7 +22,7 @@ endif()
 
 find_package(TBB REQUIRED)
 if (NOT TBB_MALLOC_FOUND)
-  message(FATAL_ERROR "TBB malloc library required.")
+  message(FATAL_ERROR "TBB malloc library required for scalable allocator.")
 endif()
 include_directories(AFTER SYSTEM ${TBB_INCLUDE_DIRS} ${TBB_MALLOC_INCLUDE_DIRS})
 set(KNN_LIBS ${KNN_LIBS} ${TBB_LIBRARIES} ${TBB_MALLOC_LIBRARIES})
@@ -40,17 +40,14 @@ set(KNN_SRC
   BinaryIO.cc)
 
 set(KNN_APPS_SRC
-  SIFTClassify.cc)
+  SIFTClassify.cc
+  TestTreeBuildParallel.cpp)
 
 set(KNN_TEST_SRC
   TestBinaryIO.cc
   TestBoundedHeap.cc
   TestTraversal.cc
   TestVariance.cc)
-
-if (OpenMP_FOUND)
-  set(KNN_TEST_SRC ${KNN_TEST_SRC} TestTreeBuildParallel.cpp)
-endif()
 
 # Enable CTest for testing
 enable_testing()
