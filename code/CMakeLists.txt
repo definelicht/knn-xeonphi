@@ -3,6 +3,13 @@ project(knn)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR}/cmake/modules/)
 
+if (NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
+  if (CMAKE_BUILD_TYPE AND (NOT CMAKE_BUILD_TYPE STREQUAL "Release"))
+    message(WARNING "Unknown build type. Defaulting to release.")
+  endif()
+  set(CMAKE_BUILD_TYPE "Release")
+endif()
+
 find_package(Threads REQUIRED)
 set(KNN_LIBS ${KNN_LIBS} ${CMAKE_THREAD_LIBS_INIT})
 
@@ -35,10 +42,9 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -march=native")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra")
-if (NOT CMAKE_BUILD_TYPE)
-  set(CMAKE_BUILD_TYPE "Release")
+if (CMAKE_BUILD_TYPE MATCHES Debug)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Weffc++")
 endif()
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Weffc++")
 
 set(KNN_SRC
   BinaryIO.cc)
