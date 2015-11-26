@@ -9,6 +9,7 @@
 #include <stdexcept> // std::invalid_argument
 #include <string>
 #include <vector>
+/* #include <tbb/task_scheduler_init.h> */
 #include <tbb/parallel_for_each.h>
 #include <tbb/task_group.h>
 #include <tbb/scalable_allocator.h>
@@ -364,6 +365,7 @@ KDTree<Dim, Randomized, T>::BuildTreeParallel(DataContainer<T> const &points,
         // Points are not consumed before a leaf is reached
         size_t offset = 2*std::distance(begin, begin+splitPivot); // (2*nSubleaves - 1) + 1
 
+        /* tbb::task_scheduler_init init(4); */
         tbb::task_group myGroup;
         myGroup.run([&]{mySelf->left  = BuildTreeParallel(points, pivot, begin, begin + splitPivot, mamaID + 1, nVarianceSamples, nHighestVariances);});
         myGroup.run([&]{mySelf->right = BuildTreeParallel(points, pivot, begin + splitPivot, end, mamaID + offset, nVarianceSamples, nHighestVariances);});
