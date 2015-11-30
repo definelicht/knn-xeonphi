@@ -4,9 +4,6 @@
 #include <fstream>
 #include <string>
 #include <vector>
-#ifdef KNN_USE_OMP
-#include <omp.h>
-#endif
 #include "knn/BinaryIO.h"
 #include "knn/KDTree.h"
 #include "knn/Random.h"
@@ -101,21 +98,7 @@ int main(int argc, char** argv)
         return 1;
     }
 
-#ifdef KNN_USE_OMP
-    int nThreads, maxThreads;
-#pragma omp parallel
-    {
-#pragma omp single
-        {
-            nThreads   = omp_get_num_threads();
-            maxThreads = omp_get_max_threads();
-        }
-    }
-    cout << "Threads = " << nThreads << " out of " << maxThreads << endl;
-#endif
-
     Timer timer;
-
 
     std::cout << "Reading data... ";
     timer.Start();
@@ -132,7 +115,9 @@ int main(int argc, char** argv)
     }
     {
         using myTreeType = KDTree<128, false, float>;
-        std::cout << "Building kd-tree parallel... ";
+        std::cout << "Building kd-tree parallel with "
+                  << std::thread::hardware_concurrency()
+                  << " available hardware threads... ";
         timer.Start();
         myTreeType kdTreeP(train, myTreeType::Pivot::median, -1, -1, true);
         double elapsedParallel = timer.Stop();
