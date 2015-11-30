@@ -9,7 +9,7 @@
 #include <stdexcept> // std::invalid_argument
 #include <string>
 #include <vector>
-/* #include <tbb/task_scheduler_init.h> */
+#include <tbb/task_scheduler_init.h>
 #include <tbb/parallel_for_each.h>
 #include <tbb/task_group.h>
 #include <tbb/scalable_allocator.h>
@@ -89,13 +89,9 @@ public:
 
 private:
   TreeItr BuildTree(DataContainer<T> const &data, Pivot pivot, IndexItr begin,
-                    const IndexItr end, int nVarianceSamples,
-                    int nHighestVariances);
-
-  TreeItr BuildTreeParallel(DataContainer<T> const &data, Pivot pivot,
-                            IndexItr begin, const IndexItr end,
-                            const size_t mamaID, int nVarianceSamples,
-                            int nHighestVariances);
+                    const IndexItr end, const size_t mamaID,
+                    int nVarianceSamples, int nHighestVariances, int treeWidth,
+                    int splitWidth);
 
   std::vector<Node, tbb::scalable_allocator<Node>> tree_;
 };
@@ -156,16 +152,18 @@ KDTree<Dim, Randomized, T>::KDTree(DataContainer<T> const &points, Pivot pivot,
   /* TODO: (fabianw; Sat Nov 21 16:16:17 2015) these are too many */
   /* tree_.reserve(log2(nLeaves_)*nLeaves_); */
   const size_t nNodes = 2 * nLeaves - 1;
-  tree_.reserve(nNodes); // exact number of nodes if points are not consumed until leaf is reached, is tree is evenly split, always odd
+  tree_.resize(nNodes); // exact number of nodes if points are not consumed
+                        // until leaf is reached, is tree is evenly split,
+                        // always odd
   std::vector<size_t, tbb::scalable_allocator<size_t>> indices(nLeaves);
   std::iota(indices.begin(), indices.end(), 0);
   if (!parallel) {
-    BuildTree(points, pivot, indices.begin(), indices.end(), nVarianceSamples,
-              nHighestVariances);
+    BuildTree(points, pivot, indices.begin(), indices.end(), 0,
+              nVarianceSamples, nHighestVariances, 1, 1);
   } else {
-    tree_.resize(nNodes);
-    BuildTreeParallel(points, pivot, indices.begin(), indices.end(), 0,
-                      nVarianceSamples, nHighestVariances);
+    BuildTree(points, pivot, indices.begin(), indices.end(), 0,
+              nVarianceSamples, nHighestVariances, 1,
+              std::numeric_limits<int>::max());
   }
 }
 
@@ -289,52 +287,11 @@ template <size_t Dim, bool Randomized, typename T>
 typename KDTree<Dim, Randomized, T>::TreeItr
 KDTree<Dim, Randomized, T>::BuildTree(DataContainer<T> const &points,
                                       Pivot pivot, IndexItr begin,
-                                      const IndexItr end, int nVarianceSamples,
-                                      int nHighestVariances) {
+                                      const IndexItr end, const size_t mamaID,
+                                      int nVarianceSamples,
+                                      int nHighestVariances, int treeWidth,
+                                      int splitWidth) {
 
-  const auto treeItr = tree_.data() + tree_.size();
-  if (std::distance(begin, end) > 1) {
-    const auto meanAndVariance =
-        MeanAndVariance<T, Dim>(points, nVarianceSamples, begin, end);
-    const size_t splitDim =
-        GetSplitDim<Randomized, Dim, T>::Get(5, meanAndVariance.second);
-    size_t splitPivot;
-    if (pivot == Pivot::median) {
-      splitPivot = std::distance(begin, end) / 2;
-      std::nth_element(begin, begin + splitPivot, end, [&points, &splitDim](
-                                                           size_t a, size_t b) {
-        return points[Dim * a + splitDim] < points[Dim * b + splitDim];
-      });
-    } else {
-      const T splitMean = meanAndVariance.first[splitDim];
-      splitPivot = std::distance(
-          begin, std::partition(begin, end,
-                                [&points, &splitDim, &splitMean](size_t i) {
-                                  return points[Dim * i + splitDim] < splitMean;
-                                }));
-    }
-    const size_t splitIndex = begin[splitPivot];
-    tree_.emplace_back(points.data() + Dim * splitIndex, splitIndex, splitDim);
-    // Points are not consumed before a leaf is reached
-    treeItr->left = BuildTree(points, pivot, begin, begin + splitPivot,
-                              nVarianceSamples, nHighestVariances);
-    treeItr->right = BuildTree(points, pivot, begin + splitPivot, end,
-                               nVarianceSamples, nHighestVariances);
-  } else {
-    // Leaf node
-    tree_.emplace_back(points.data() + Dim * (*begin), *begin, 0);
-  }
-  return treeItr;
-}
-
-template <size_t Dim, bool Randomized, typename T>
-typename KDTree<Dim, Randomized, T>::TreeItr
-KDTree<Dim, Randomized, T>::BuildTreeParallel(DataContainer<T> const &points,
-                                              Pivot pivot, IndexItr begin,
-                                              const IndexItr end,
-                                              const size_t mamaID,
-                                              int nVarianceSamples,
-                                              int nHighestVariances) {
     const auto mySelf = tree_.data() + mamaID;
 
     if (std::distance(begin, end) > 1) {
@@ -363,13 +320,33 @@ KDTree<Dim, Randomized, T>::BuildTreeParallel(DataContainer<T> const &points,
         *mySelf = Node(points.data() + Dim * splitIndex, splitIndex, splitDim);
 
         // Points are not consumed before a leaf is reached
-        size_t offset = 2*std::distance(begin, begin+splitPivot); // (2*nSubleaves - 1) + 1
+        size_t offset =
+            2 *
+            std::distance(begin, begin + splitPivot); // (2*nSubleaves - 1) + 1
 
-        /* tbb::task_scheduler_init init(4); */
-        tbb::task_group myGroup;
-        myGroup.run([&]{mySelf->left  = BuildTreeParallel(points, pivot, begin, begin + splitPivot, mamaID + 1, nVarianceSamples, nHighestVariances);});
-        myGroup.run([&]{mySelf->right = BuildTreeParallel(points, pivot, begin + splitPivot, end, mamaID + offset, nVarianceSamples, nHighestVariances);});
-        myGroup.wait();
+        if (treeWidth < splitWidth) { 
+          // Keep spawning more tasks
+          tbb::task_group myGroup;
+          myGroup.run([&] {
+            mySelf->left = BuildTree(
+                points, pivot, begin, begin + splitPivot, mamaID + 1,
+                nVarianceSamples, nHighestVariances, 2 * treeWidth, splitWidth);
+          });
+          myGroup.run([&] {
+            mySelf->right = BuildTree(
+                points, pivot, begin + splitPivot, end, mamaID + offset,
+                nVarianceSamples, nHighestVariances, 2 * treeWidth, splitWidth);
+          });
+          myGroup.wait();
+        } else {
+          // Enough tasks, recurse the subtree alone
+          mySelf->left = BuildTree(
+              points, pivot, begin, begin + splitPivot, mamaID + 1,
+              nVarianceSamples, nHighestVariances, 2 * treeWidth, splitWidth);
+          mySelf->right = BuildTree(
+              points, pivot, begin, begin + splitPivot, mamaID + offset,
+              nVarianceSamples, nHighestVariances, 2 * treeWidth, splitWidth);
+        }
     }
     else
     {
