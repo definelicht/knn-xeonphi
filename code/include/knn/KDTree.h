@@ -8,8 +8,8 @@
 #include <random>
 #include <stdexcept> // std::invalid_argument
 #include <string>
+#include <thread> // std::thread::hardware_concurrency
 #include <vector>
-#include <tbb/task_scheduler_init.h>
 #include <tbb/parallel_for_each.h>
 #include <tbb/task_group.h>
 #include <tbb/scalable_allocator.h>
@@ -149,8 +149,6 @@ KDTree<Dim, Randomized, T>::KDTree(DataContainer<T> const &points, Pivot pivot,
   if (points.size() % Dim != 0) {
     throw std::invalid_argument("KDTree received unbalanced data.");
   }
-  /* TODO: (fabianw; Sat Nov 21 16:16:17 2015) these are too many */
-  /* tree_.reserve(log2(nLeaves_)*nLeaves_); */
   const size_t nNodes = 2 * nLeaves - 1;
   tree_.resize(nNodes); // exact number of nodes if points are not consumed
                         // until leaf is reached, is tree is evenly split,
@@ -163,7 +161,7 @@ KDTree<Dim, Randomized, T>::KDTree(DataContainer<T> const &points, Pivot pivot,
   } else {
     BuildTree(points, pivot, indices.begin(), indices.end(), 0,
               nVarianceSamples, nHighestVariances, 1,
-              std::numeric_limits<int>::max());
+              std::thread::hardware_concurrency());
   }
 }
 
@@ -380,12 +378,10 @@ template <size_t Dim, bool Randomized, typename T>
 std::ostream &
 operator<<(std::ostream &os,
            KDTree<Dim, Randomized, T> const &tree) {
-  std::function<void(
-      typename KDTree<Dim, Randomized, T>::NodeItr,
-      std::string indent)> printRecursive = [&os,
-                                             &printRecursive](
-      typename KDTree<Dim, Randomized, T>::NodeItr root,
-      std::string indent) {
+  std::function<void(typename KDTree<Dim, Randomized, T>::NodeItr,
+                     std::string indent)> printRecursive = [&os,
+                                                            &printRecursive](
+      typename KDTree<Dim, Randomized, T>::NodeItr root, std::string indent) {
     indent += "  ";
     auto val = root.value();
     os << indent << "(" << (*val);
