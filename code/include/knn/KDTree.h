@@ -301,10 +301,11 @@ KDTree<Dim, Randomized, T>::BuildTree(DataContainer<T> const &points,
         size_t splitPivot;
         if (pivot == Pivot::median) {
             splitPivot = std::distance(begin, end) / 2;
-            std::nth_element(begin, begin + splitPivot, end, [&points, &splitDim](
-                        size_t a, size_t b) {
-                    return points[Dim * a + splitDim] < points[Dim * b + splitDim];
-                    });
+            std::nth_element(begin, begin + splitPivot, end,
+                             [&points, &splitDim](size_t a, size_t b) {
+                               return points[Dim * a + splitDim] <
+                                      points[Dim * b + splitDim];
+                             });
         } else {
             const T splitMean = meanAndVariance.first[splitDim];
             splitPivot = std::distance(
@@ -342,14 +343,12 @@ KDTree<Dim, Randomized, T>::BuildTree(DataContainer<T> const &points,
               points, pivot, begin, begin + splitPivot, mamaID + 1,
               nVarianceSamples, nHighestVariances, 2 * treeWidth, splitWidth);
           mySelf->right = BuildTree(
-              points, pivot, begin, begin + splitPivot, mamaID + offset,
+              points, pivot, begin + splitPivot, end, mamaID + offset,
               nVarianceSamples, nHighestVariances, 2 * treeWidth, splitWidth);
         }
-    }
-    else
-    {
-        // Leaf node, no babies
-        *mySelf = Node(points.data() + Dim * (*begin), *begin, 0);
+    } else {
+      // Leaf node, no babies
+      *mySelf = Node(points.data() + Dim * (*begin), *begin, 0);
     }
     return mySelf;
 }
