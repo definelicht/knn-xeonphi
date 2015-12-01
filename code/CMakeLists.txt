@@ -52,7 +52,9 @@ if (CMAKE_BUILD_TYPE MATCHES Debug)
 endif()
 
 set(KNN_SRC
-  BinaryIO.cc)
+  BinaryIO.cc
+  flann/ext/lz4.c
+  flann/ext/lz4hc.c)
 
 set(KNN_APPS_SRC
   SIFTClassify.cc
@@ -60,6 +62,7 @@ set(KNN_APPS_SRC
 
 set(KNN_TEST_SRC
   TestBinaryIO.cc
+  TestFlann.cpp
   TestBoundedHeap.cc
   TestTraversal.cc
   TestVariance.cc)
