@@ -18,6 +18,13 @@ if (OpenMP_FOUND OR OPENMP_FOUND)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DKNN_USE_OMP ${OpenMP_CXX_FLAGS}")
 endif()
 
+find_package(Flann)
+if (Flann_FOUND)
+  include_directories(AFTER SYSTEM ${Flann_INCLUDE_DIRS})
+  set(KNN_LIBS ${KNN_LIBS} ${Flann_LIBS})
+  set(KNN_APPS_SRC ${KNN_APPS_SRC} TestFlann.cpp)
+endif()
+
 find_package(Vc)
 if (Vc_FOUND)
   include_directories(AFTER SYSTEM ${Vc_INCLUDE_DIR})
@@ -52,20 +59,17 @@ if (CMAKE_BUILD_TYPE MATCHES Debug)
 endif()
 
 set(KNN_SRC
-  BinaryIO.cc
-  flann/ext/lz4.c
-  flann/ext/lz4hc.c)
+    BinaryIO.cc)
 
-set(KNN_APPS_SRC
-  SIFTClassify.cc
-  TestTreeBuildParallel.cpp)
+set(KNN_APPS_SRC ${KNN_APPS_SRC}
+    SIFTClassify.cc
+    TestTreeBuildParallel.cpp)
 
 set(KNN_TEST_SRC
-  TestBinaryIO.cc
-  TestFlann.cpp
-  TestBoundedHeap.cc
-  TestTraversal.cc
-  TestVariance.cc)
+    TestBinaryIO.cc
+    TestBoundedHeap.cc
+    TestTraversal.cc
+    TestVariance.cc)
 
 # Enable CTest for testing
 enable_testing()

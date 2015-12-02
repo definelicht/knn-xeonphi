@@ -45,23 +45,28 @@ std::vector<T> ReadTexMex(std::string const &path, const int dim,
 
 int main(int argc, char** argv)
 {
-    if (argc < 2) {
-        std::cerr << "Usage: <training data file>" << std::endl;
+    if (argc < 4) {
+      std::cerr << "Usage: <number of randomized trees> <training data file> "
+                   "<test data file>"
+                << std::endl;
         return 1;
     }
+
+    const int nTrees = std::stoi(argv[1]);
 
     Timer timer;
 
     std::cout << "Reading data... ";
     timer.Start();
-    auto train = ReadTexMex<float>(argv[1], 128, -1);
-    auto test  = ReadTexMex<float>(argv[2], 128, -1);
+    auto train = ReadTexMex<float>(argv[2], 128, -1);
+    auto test  = ReadTexMex<float>(argv[3], 128, -1);
     double elapsed = timer.Stop();
     std::cout << "Done in " << elapsed << " seconds.\n";
 
     flann::Matrix<float> flannTrain(train.data(), train.size()/128, 128);
     flann::Matrix<float> flannTest(test.data(), test.size()/128, 128);
-    flann::Index<flann::L2<float> > index(flannTrain, flann::KDTreeIndexParams(1));
+    flann::Index<flann::L2<float>> index(flannTrain,
+                                         flann::KDTreeIndexParams(nTrees));
 
     const int nn = 100;
 
@@ -82,21 +87,21 @@ int main(int argc, char** argv)
     << " available hardware threads... ";
     timer.Start();
     auto trees = knn::KDTree<128, true, float>::BuildRandomizedTrees(
-            train, 1, knn::KDTree<128, true, float>::Pivot::median, 100);
+            train, nTrees, knn::KDTree<128, true, float>::Pivot::median, 100);
     double elapsedParallel = timer.Stop();
     std::cout << "Done in " << elapsedParallel 
     << " seconds.\nSpeedup: " << elapsedFlann / elapsedParallel
     << "\n";
 
     std::cout
-    << "FLANN KNN search using 1 randomized approximate tree... ";
+    << "FLANN KNN search using " << nTrees << " randomized approximate tree(s)... ";
     timer.Start();
     index.knnSearch(flannTest, indices, dists, nn, flann::SearchParams(128));
     elapsedFlann = timer.Stop();
     std::cout << "Done in " << elapsedFlann << " seconds. " << std::endl;
 
     std::cout
-    << "KNN search using 1 randomized approximate tree... ";
+    << "KNN search using " << nTrees << " randomized approximate tree(s)... ";
     timer.Start();
     auto resultRandomized = knn::KnnApproximate<128, float, float>(
             trees, nn, 1000, test, knn::SquaredEuclidianDistance<float, 128>);
