@@ -295,9 +295,8 @@ KDTree<Dim, Randomized, T>::BuildTree(DataContainer<T> const &points,
     if (std::distance(begin, end) > 1) {
         const auto meanAndVariance =
         MeanAndVariance<T, Dim>(points, nVarianceSamples, begin, end);
-        // TODO: make number of highest variances to sample from an input
-        const size_t splitDim =
-            GetSplitDim<Randomized, Dim, T>::Get(5, meanAndVariance.second);
+        const size_t splitDim = GetSplitDim<Randomized, Dim, T>::Get(
+            nHighestVariances, meanAndVariance.second);
         size_t splitPivot;
         if (pivot == Pivot::median) {
             splitPivot = std::distance(begin, end) / 2;
