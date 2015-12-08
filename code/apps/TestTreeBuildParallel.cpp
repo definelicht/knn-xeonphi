@@ -15,7 +15,7 @@ using namespace knn;
 /* constexpr size_t n = 1<<1; */
 // constexpr size_t n = 4;
 /* constexpr size_t nDims = 128; */
-constexpr size_t nDims = 2;
+constexpr size_t nDims = 128;
 
 template <typename T>
 std::vector<T> ReadTexMex(std::string const &path, const int dim,
@@ -38,12 +38,13 @@ std::vector<T> ReadTexMex(std::string const &path, const int dim,
   return output;
 }
 
-using myTreeType = KDTree<nDims, false, float>;
+using myTreeType = KDTree<float, nDims, false>;
 
 void printTree(const myTreeType::NodeItr& a, const myTreeType::NodeItr& b)
 {
-    cout << *a.value() << endl;
-    cout << *b.value() << endl;
+    cout << a.index() << "\n" << b.index() << "\n";
+    // cout << *a.value() << endl;
+    // cout << *b.value() << endl;
     cout << endl;
     if (a.inBounds())
     {
@@ -57,8 +58,8 @@ void printTree(const myTreeType::NodeItr& a, const myTreeType::NodeItr& b)
     }
 }
 
-void compareTree(const myTreeType::NodeItr& a, const myTreeType::NodeItr& b, const size_t level=0)
-{
+void compareTree(const myTreeType::NodeItr &a, const myTreeType::NodeItr &b,
+                 const size_t level = 0) {
     cout << "Level = " << level << endl;
     cout << "Bounds a:   " << a.inBounds() << endl;
     cout << "Bounds b:   " << b.inBounds() << endl;
@@ -66,13 +67,13 @@ void compareTree(const myTreeType::NodeItr& a, const myTreeType::NodeItr& b, con
     cout << "Index b:    " << b.index() << endl;
     cout << "SplitDim a: " << a.splitDim() << endl;
     cout << "SplitDim b: " << b.splitDim() << endl;
-    cout << "Value a:    " << *a.value() << endl;
-    cout << "Value b:    " << *b.value() << endl;
+    // cout << "Value a:    " << *a.value() << endl;
+    // cout << "Value b:    " << *b.value() << endl;
     cout << endl;
     assert(a.inBounds() == b.inBounds());
     assert(a.index() == b.index());
     assert(a.splitDim() == b.splitDim());
-    assert(*a.value() == *b.value());
+    // assert(*a.value() == *b.value());
     if (a.inBounds())
         compareTree(a.Left(), b.Left(), level+1);
     if (a.inBounds())
@@ -106,20 +107,22 @@ int main(int argc, char** argv)
     double elapsed = timer.Stop();
     std::cout << "Done in " << elapsed << " seconds.\n";
     {
-        using myTreeType = KDTree<128, false, float>;
+        using myTreeType = KDTree<float, 128, false>;
         std::cout << "Building kd-tree seqential... ";
         timer.Start();
-        myTreeType kdTreeS(train, myTreeType::Pivot::median, -1, -1, false);
+        myTreeType kdTreeS(train.cbegin(), train.cend(),
+                           myTreeType::Pivot::median, -1, -1, false);
         elapsed = timer.Stop();
         std::cout << "Done in " << elapsed << " seconds.\n";
     }
     {
-        using myTreeType = KDTree<128, false, float>;
+        using myTreeType = KDTree<float, 128, false>;
         std::cout << "Building kd-tree parallel with "
                   << std::thread::hardware_concurrency()
                   << " available hardware threads... ";
         timer.Start();
-        myTreeType kdTreeP(train, myTreeType::Pivot::median, -1, -1, true);
+        myTreeType kdTreeP(train.cbegin(), train.cend(),
+                           myTreeType::Pivot::median, -1, -1, true);
         double elapsedParallel = timer.Stop();
         std::cout << "Done in " << elapsedParallel 
                   << " seconds.\nSpeedup: " << elapsed / elapsedParallel

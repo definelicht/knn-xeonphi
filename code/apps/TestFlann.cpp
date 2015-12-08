@@ -81,13 +81,15 @@ int main(int argc, char** argv)
     double elapsedFlann = timer.Stop();
     std::cout << "Done in " << elapsedFlann << " seconds." << std::endl;
 
-    using myTreeType = KDTree<128, true, float>;
+    using myTreeType = KDTree<float, 128, true>;
+    using DataItr = typename decltype(train)::const_iterator;
     std::cout << "Building randomized kd-tree parallel with "
     << std::thread::hardware_concurrency()
     << " available hardware threads... ";
     timer.Start();
-    auto trees = knn::KDTree<128, true, float>::BuildRandomizedTrees(
-            train, nTrees, knn::KDTree<128, true, float>::Pivot::median, 100);
+    auto trees = knn::KDTree<float, 128, true>::BuildRandomizedTrees(
+        train.cbegin(), train.cend(), nTrees,
+        knn::KDTree<float, 128, true>::Pivot::median, 100);
     double elapsedParallel = timer.Stop();
     std::cout << "Done in " << elapsedParallel 
     << " seconds.\nSpeedup: " << elapsedFlann / elapsedParallel
@@ -96,15 +98,16 @@ int main(int argc, char** argv)
     std::cout
     << "FLANN KNN search using " << nTrees << " randomized approximate tree(s)... ";
     timer.Start();
-    index.knnSearch(flannTest, indices, dists, nn, flann::SearchParams(128));
+    index.knnSearch(flannTest, indices, dists, nn, flann::SearchParams(1000));
     elapsedFlann = timer.Stop();
     std::cout << "Done in " << elapsedFlann << " seconds. " << std::endl;
 
     std::cout
     << "KNN search using " << nTrees << " randomized approximate tree(s)... ";
     timer.Start();
-    auto resultRandomized = knn::KnnApproximate<128, float, float>(
-            trees, nn, 1000, test, knn::SquaredEuclidianDistance<float, 128>);
+    auto resultRandomized = knn::KnnApproximate<128, float, DataItr>(
+        trees, train.cbegin(), test.cbegin(), test.cend(), nn, 1000,
+        knn::SquaredEuclidianDistance<DataItr, 128>);
     elapsedParallel = timer.Stop();
     std::cout << "Done in " << elapsedParallel
     << " seconds.\nSpeedup: " << elapsedFlann / elapsedParallel

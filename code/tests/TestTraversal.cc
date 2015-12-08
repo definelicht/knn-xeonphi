@@ -9,7 +9,7 @@ using namespace knn;
 
 constexpr size_t n = 1<<14;
 constexpr size_t nDims = 128;
-using TreeType = KDTree<nDims, false, float>;
+using TreeType = KDTree<float, nDims, false>;
 
 void Traverse(typename TreeType::NodeItr itr, std::vector<size_t> &indices) {
   if (!itr.inBounds()) {
@@ -22,18 +22,14 @@ void Traverse(typename TreeType::NodeItr itr, std::vector<size_t> &indices) {
     indices.push_back(itr.index());
     return;
   }
-  if (left.inBounds()) {
-    Traverse(left, indices);
-  }
-  if (right.inBounds()) {
-    Traverse(right, indices);
-  }
+  Traverse(left, indices);
+  Traverse(right, indices);
 }
 
 int main() {
   std::vector<float> train(n*nDims);
   random::FillUniform(train.begin(), train.end());
-  TreeType kdTree(train);
+  TreeType kdTree(train.cbegin(), train.cend());
   std::vector<size_t> indices;
   indices.reserve(n);
   Traverse(kdTree.Root(), indices);
