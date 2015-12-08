@@ -96,7 +96,7 @@ int main(int argc, char** argv)
     std::cout
     << "FLANN KNN search using " << nTrees << " randomized approximate tree(s)... ";
     timer.Start();
-    index.knnSearch(flannTest, indices, dists, nn, flann::SearchParams(128));
+    index.knnSearch(flannTest, indices, dists, nn, flann::SearchParams(1000));
     elapsedFlann = timer.Stop();
     std::cout << "Done in " << elapsedFlann << " seconds. " << std::endl;
 
