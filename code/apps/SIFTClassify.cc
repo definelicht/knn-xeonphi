@@ -7,6 +7,9 @@
 #include <istream>
 #include <string>
 #include <unordered_map>
+#ifdef KNN_USE_FLANN
+#include <flann/flann.h>
+#endif
 
 template <typename T>
 std::vector<T> ReadTexMex(std::string const &path, const int dim,
@@ -32,14 +35,15 @@ std::vector<T> ReadTexMex(std::string const &path, const int dim,
 int main(int argc, char const *argv[]) {
   if (argc < 5) {
     std::cerr << "Usage: <training data file> <label file> <test data file> "
-                 "<k> [<max number of queries>]"
+                 "<k> <max leaves to check> [<max number of queries>]"
               << std::endl;
     return 1;
   }
   const int k = std::stoi(argv[4]);
+  const int maxChecks = std::stoi(argv[5]);
   int nQueries = -1;
-  if (argc >= 6) {
-    nQueries = std::stoi(argv[5]);
+  if (argc >= 7) {
+    nQueries = std::stoi(argv[6]);
   }
 
   knn::Timer timer;
@@ -59,8 +63,6 @@ int main(int argc, char const *argv[]) {
 
   std::cout << "Nearest neighbors using linear search... ";
   timer.Start();
-  std::vector<float> a = {1,2,3,4};
-  std::vector<float> b = {5,6,7,8};
   auto resultLinear = knn::KnnLinear<128, float, float>(
       train, k, test, knn::SquaredEuclidianDistance<float, 128>);
   elapsed = timer.Stop();
@@ -78,23 +80,60 @@ int main(int argc, char const *argv[]) {
   elapsed = timer.Stop();
   std::cout << "Done in " << elapsed << " seconds.\n";
 
+#ifdef KNN_USE_FLANN
+  std::cout << "Building FLANN randomized kd-tree trees... ";
+  flann::Matrix<float> flannTrain(train.data(), nTrain, 128);
+  flann::Matrix<float> flannTest(test.data(), nTest, 128);
+  flann::Matrix<int> flannIndices(new int[nTest * k], flannTest.rows, k);
+  flann::Matrix<float> flannDists(new float[nTest * k], flannTest.rows, k);
+  timer.Start();
+  flann::Index<flann::L2<float>> index(flannTrain, flann::KDTreeIndexParams(5));
+  index.buildIndex();
+  double elapsedFlannBuild = timer.Stop();
+  std::cout << "Done in " << elapsedFlannBuild << " seconds.\n";
+  std::cout << "Nearest neighbor search using 5 randomized approximate FLANN "
+               "trees... ";
+  index.knnSearch(flannTest, flannIndices, flannDists, k,
+                  flann::SearchParams(maxChecks));
+  double elapsedFlannSearch = timer.Stop();
+  std::vector<std::vector<std::pair<float, size_t>>> resultKdTreeFlann(nTest);
+  for (int i = 0; i < nTest; ++i) {
+    for (int j = 0; j < k; ++j) {
+      resultKdTreeFlann[i].emplace_back(
+          std::make_pair(flannDists[i][j], flannIndices[i][j]));
+    }
+  }
+  std::cout << "Done in " << elapsedFlannSearch << " seconds.\n";
+#endif
+
   std::cout << "Building randomized trees... ";
   timer.Start();
   auto trees = knn::KDTree<128, true, float>::BuildRandomizedTrees(
       train, 5, knn::KDTree<128, true, float>::Pivot::median, 100);
   elapsed = timer.Stop();
   std::cout << "Done in " << elapsed << " seconds.\n";
+#ifdef KNN_USE_FLANN
+  std::cout << "Build speedup over FLANN: " << elapsedFlannBuild / elapsed
+            << ".\n";
+#endif
   std::cout
       << "Nearest neighbor search using 5 randomized approximate trees... ";
   timer.Start();
   auto resultRandomized = knn::KnnApproximate<128, float, float>(
-      trees, k, 1000, test, knn::SquaredEuclidianDistance<float, 128>);
+      trees, k, maxChecks, test, knn::SquaredEuclidianDistance<float, 128>);
   elapsed = timer.Stop();
   std::cout << "Done in " << elapsed << " seconds.\n";
+#ifdef KNN_USE_FLANN
+  std::cout << "Search speedup over FLANN: " << elapsedFlannSearch / elapsed
+            << ".\n";
+#endif
 
   float equalLinear = 0;
   float equalKdTree = 0;
   float equalRand = 0;
+#ifdef KNN_USE_FLANN
+  float equalKdTreeFlann = 0;
+#endif
 
   timer.Start();
   auto sortByIndex = [](std::pair<float, size_t> const &a,
@@ -108,12 +147,20 @@ int main(int argc, char const *argv[]) {
     std::sort(resultKdTree[i].begin(), resultKdTree[i].end(), sortByIndex);
     std::sort(resultRandomized[i].begin(), resultRandomized[i].end(),
               sortByIndex);
+#ifdef KNN_USE_FLANN
+    std::sort(resultKdTreeFlann[i].begin(), resultKdTreeFlann[i].end(),
+              sortByIndex);
+#endif
     auto iLinear = resultLinear[i].cbegin();
     auto iLinearEnd = resultLinear[i].cend();
     auto iKd = resultKdTree[i].cbegin();
     auto iKdEnd = resultKdTree[i].cend();
     auto iRand = resultRandomized[i].cbegin();
     auto iRandEnd = resultRandomized[i].cend();
+#ifdef KNN_USE_FLANN
+    auto iKdFlann = resultKdTreeFlann[i].cbegin();
+    auto iKdFlannEnd = resultKdTreeFlann[i].cend();
+#endif
     for (auto iGt = groundTruth.cbegin() + i * k,
               iGtEnd = groundTruth.cend() + (i + 1) * k;
          iGt < iGtEnd; ++iGt) {
@@ -147,6 +194,18 @@ int main(int argc, char const *argv[]) {
         }
         ++iRand;
       }
+#ifdef KNN_USE_FLANN
+      while (iKdFlann < iKdFlannEnd) {
+        if (static_cast<int>(iKdFlann->second) == *iGt) {
+          ++iKdFlann;
+          equalKdTreeFlann += 1;
+          break;
+        } else if (static_cast<int>(iKdFlann->second) > *iGt) {
+          break;
+        }
+        ++iKdFlann;
+      }
+#endif
     }
   }
   equalLinear /= nTest;
@@ -163,6 +222,12 @@ int main(int argc, char const *argv[]) {
   std::cout << "Randomized kd-trees: " << equalRand << " / " << nTest << " ("
             << static_cast<float>(equalRand) / nTest
             << ") classified correctly on average.\n";
+#ifdef KNN_USE_FLANN
+  equalKdTreeFlann /= nTest;
+  std::cout << "FLANN kd-tree: " << equalKdTreeFlann << " / " << nTest << " ("
+            << static_cast<float>(equalKdTreeFlann) / nTest
+            << ") classified correctly on average.\n";
+#endif
 
   return 0;
 }

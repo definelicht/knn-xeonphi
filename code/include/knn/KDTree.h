@@ -1,14 +1,13 @@
 #pragma once
 
-#include <cassert>
 #include <algorithm>  // std::nth_element
 #include <functional> // std::function
 #include <numeric>    // std::iota
 #include <ostream>
 #include <random>
-#include <stdexcept> // std::invalid_argument
+#include <stdexcept>  // std::invalid_argument
 #include <string>
-#include <thread> // std::thread::hardware_concurrency
+#include <thread>     // std::thread::hardware_concurrency
 #include <vector>
 #include <tbb/parallel_for_each.h>
 #include <tbb/task_group.h>
@@ -21,7 +20,7 @@
 namespace knn {
 
 template <size_t Dim, bool Randomized, typename T>
-class KDTree {
+class alignas(64) KDTree {
 
 private:
   struct Node;
@@ -85,7 +84,8 @@ public:
   static std::vector<KDTree<Dim, true, T>>
   BuildRandomizedTrees(DataContainer<T> const &points, int nTrees,
                        Pivot pivot = Pivot::median, int nVarianceSamples = 100,
-                       int nHighestVariances = Dim > 10 ? 5 : Dim / 2);
+                       int nHighestVariances = Dim > 10 ? 5 : Dim / 2,
+                       bool parallel = true);
 
 private:
   TreeItr BuildTree(DataContainer<T> const &data, Pivot pivot, IndexItr begin,
@@ -161,7 +161,11 @@ KDTree<Dim, Randomized, T>::KDTree(DataContainer<T> const &points, Pivot pivot,
   } else {
     BuildTree(points, pivot, indices.begin(), indices.end(), 0,
               nVarianceSamples, nHighestVariances, 1,
+#ifndef __MIC__ 
               std::thread::hardware_concurrency());
+#else
+              244);
+#endif
   }
 }
 
@@ -295,9 +299,8 @@ KDTree<Dim, Randomized, T>::BuildTree(DataContainer<T> const &points,
     if (std::distance(begin, end) > 1) {
         const auto meanAndVariance =
         MeanAndVariance<T, Dim>(points, nVarianceSamples, begin, end);
-        // TODO: make number of highest variances to sample from an input
-        const size_t splitDim =
-            GetSplitDim<Randomized, Dim, T>::Get(5, meanAndVariance.second);
+        const size_t splitDim = GetSplitDim<Randomized, Dim, T>::Get(
+            nHighestVariances, meanAndVariance.second);
         size_t splitPivot;
         if (pivot == Pivot::median) {
             splitPivot = std::distance(begin, end) / 2;
@@ -355,21 +358,26 @@ KDTree<Dim, Randomized, T>::BuildTree(DataContainer<T> const &points,
 
 template <size_t Dim, bool Randomized, typename T>
 std::vector<KDTree<Dim, true, T>>
-KDTree<Dim, Randomized, T>::BuildRandomizedTrees(DataContainer<T> const &points,
-                                                 const int nTrees,
-                                                 const Pivot pivot,
-                                                 const int nVarianceSamples,
-                                                 const int nHighestVariances) {
+KDTree<Dim, Randomized, T>::BuildRandomizedTrees(
+    DataContainer<T> const &points, const int nTrees, const Pivot pivot,
+    const int nVarianceSamples, const int nHighestVariances, bool parallel) {
   if (nTrees < 1) {
     throw std::invalid_argument(
         "BuildRandomizedTrees: number of trees must be >=0.");
   }
   std::vector<KDTree<Dim, true, T>> trees(nTrees);
-  tbb::parallel_for_each(
-      trees.begin(), trees.end(), [&](KDTree<Dim, true, T> &tree) {
-        tree = KDTree<Dim, true, T>(points, pivot, nVarianceSamples,
-                                    nHighestVariances, true);
-      });
+  if (parallel) {
+    tbb::parallel_for_each(
+        trees.begin(), trees.end(), [&](KDTree<Dim, true, T> &tree) {
+          tree = KDTree<Dim, true, T>(points, pivot, nVarianceSamples,
+                                      nHighestVariances, true);
+        });
+  } else {
+    std::for_each(trees.begin(), trees.end(), [&](KDTree<Dim, true, T> &tree) {
+      tree = KDTree<Dim, true, T>(points, pivot, nVarianceSamples,
+                                  nHighestVariances, false);
+    });
+  }
   return trees;
 }
 

@@ -18,6 +18,14 @@ if (OpenMP_FOUND OR OPENMP_FOUND)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DKNN_USE_OMP ${OpenMP_CXX_FLAGS}")
 endif()
 
+find_package(Flann)
+if (Flann_FOUND)
+  include_directories(AFTER SYSTEM ${Flann_INCLUDE_DIRS})
+  set(KNN_LIBS ${KNN_LIBS} ${Flann_LIBS})
+  set(KNN_APPS_SRC ${KNN_APPS_SRC} TestFlann.cpp)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DKNN_USE_FLANN")
+endif()
+
 find_package(Vc)
 if (Vc_FOUND)
   include_directories(AFTER SYSTEM ${Vc_INCLUDE_DIR})
@@ -25,6 +33,8 @@ if (Vc_FOUND)
   set(Vc_ALL_FLAGS_STRING "${Vc_ALL_FLAGS}")
   string(REPLACE ";" " " Vc_ALL_FLAGS_STRING "${Vc_ALL_FLAGS_STRING}")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${Vc_ALL_FLAGS_STRING} -DKNN_USE_VC")
+else()
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
 endif()
 
 find_package(TBB REQUIRED)
@@ -42,30 +52,27 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 if (MIC)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mmic")
-else()
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mmic -DKNN_USE_MIC")
 endif()
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra")
 if (CMAKE_BUILD_TYPE MATCHES Debug)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Weffc++")
 endif()
 
-set(KNN_SRC
-  BinaryIO.cc
-  flann/ext/lz4.c
-  flann/ext/lz4hc.c)
+message(STATUS "Compiling with flags: ${CMAKE_CXX_FLAGS}")
 
-set(KNN_APPS_SRC
-  SIFTClassify.cc
-  TestTreeBuildParallel.cpp)
+set(KNN_SRC
+    BinaryIO.cc)
+
+set(KNN_APPS_SRC ${KNN_APPS_SRC}
+    SIFTClassify.cc
+    TestTreeBuildParallel.cpp)
 
 set(KNN_TEST_SRC
-  TestBinaryIO.cc
-  TestFlann.cpp
-  TestBoundedHeap.cc
-  TestTraversal.cc
-  TestVariance.cc)
+    TestBinaryIO.cc
+    TestBoundedHeap.cc
+    TestTraversal.cc
+    TestVariance.cc)
 
 # Enable CTest for testing
 enable_testing()
