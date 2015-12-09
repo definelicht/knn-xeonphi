@@ -50,23 +50,28 @@ int main(int argc, char** argv)
         return 1;
     }
 
+    const int k = std::stoi(argv[4]);
+    int nQueries = -1;
+    if (argc >= 6) {
+        nQueries = std::stoi(argv[5]);
+    }
+
     Timer timer;
 
     std::cout << "Reading data... ";
     timer.Start();
     auto train = ReadTexMex<float>(argv[1], 128, -1);
-    auto test  = ReadTexMex<float>(argv[2], 128, -1);
+    auto groundTruth = ReadTexMex<int>(argv[2], k, nQueries);
+    auto test  = ReadTexMex<float>(argv[3], 128, nQueries);
     double elapsed = timer.Stop();
     std::cout << "Done in " << elapsed << " seconds.\n";
 
+    //flann
     flann::Matrix<float> flannTrain(train.data(), train.size()/128, 128);
     flann::Matrix<float> flannTest(test.data(), test.size()/128, 128);
     flann::Index<flann::L2<float> > index(flannTrain, flann::KDTreeIndexParams(1));
-
-    const int nn = 100;
-
-    flann::Matrix<int> indices(new int[flannTest.rows*nn], flannTest.rows, nn);
-    flann::Matrix<float> dists(new float[flannTest.rows*nn], flannTest.rows, nn);
+    flann::Matrix<int> indices(new int[flannTest.rows*nn], flannTest.rows, k);
+    flann::Matrix<float> dists(new float[flannTest.rows*nn], flannTest.rows, k);
 
     std::cout << "Building randomized flann kd-tree with "
     << std::thread::hardware_concurrency()
@@ -91,7 +96,7 @@ int main(int argc, char** argv)
     std::cout
     << "FLANN KNN search using 1 randomized approximate tree... ";
     timer.Start();
-    index.knnSearch(flannTest, indices, dists, nn, flann::SearchParams(128));
+    index.knnSearch(flannTest, indices, dists, k, flann::SearchParams(128));
     elapsedFlann = timer.Stop();
     std::cout << "Done in " << elapsedFlann << " seconds. " << std::endl;
 
@@ -99,11 +104,16 @@ int main(int argc, char** argv)
     << "KNN search using 1 randomized approximate tree... ";
     timer.Start();
     auto resultRandomized = knn::KnnApproximate<128, float, float>(
-            trees, nn, 1000, test, knn::SquaredEuclidianDistance<float, 128>);
+            trees, k, 1000, test, knn::SquaredEuclidianDistance<float, 128>);
     elapsedParallel = timer.Stop();
     std::cout << "Done in " << elapsedParallel
     << " seconds.\nSpeedup: " << elapsedFlann / elapsedParallel
     << "\n";
+
+    // accuracy
+    for (size_t i = 0; i < groundTruth.size(); ++i)
+    {
+    }
 
     delete[] indices.ptr();
     delete[] dists.ptr();
