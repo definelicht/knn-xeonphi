@@ -37,6 +37,18 @@ else()
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
 endif()
 
+find_package(MPI)
+if (MPI_CXX_FOUND)
+  message(STATUS "Building WITH MPI support.")
+  set(CMAKE_CXX_COMPILE_FLAGS "${CMAKE_CXX_COMPILE_FLAGS} ${MPI_COMPILE_FLAGS}")
+  set(CMAKE_CXX_LINK_FLAGS "${CMAKE_CXX_LINK_FLAGS} ${MPI_LINK_FLAGS}")
+  include_directories(SYSTEM ${MPI_INCLUDE_PATH})
+  set(KNN_LIBS ${KNN_LIBS} ${MPI_CXX_LIBRARIES})
+  set(KNN_APPS_SRC ${KNN_APPS_SRC} SIFTClassifyMPI.cc)
+else()
+  message(STATUS "Building WITHOUT MPI support.")
+endif()
+
 find_package(TBB REQUIRED)
 if (NOT TBB_MALLOC_FOUND)
   message(FATAL_ERROR "TBB malloc library required for scalable allocator.")
@@ -50,25 +62,24 @@ endif()
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -Wextra")
 if (MIC)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mmic -DKNN_USE_MIC")
 endif()
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra")
 if (CMAKE_BUILD_TYPE MATCHES Debug)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Weffc++")
 endif()
 
 message(STATUS "Compiling with flags: ${CMAKE_CXX_FLAGS}")
 
-set(KNN_SRC
+set(KNN_SRC ${KNN_SRC}
     BinaryIO.cc)
 
 set(KNN_APPS_SRC ${KNN_APPS_SRC}
     SIFTClassify.cc
     TestTreeBuildParallel.cpp)
 
-set(KNN_TEST_SRC
+set(KNN_TEST_SRC ${KNN_TEST_SRC}
     TestBinaryIO.cc
     TestBoundedHeap.cc
     TestTraversal.cc
