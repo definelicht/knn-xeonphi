@@ -103,7 +103,7 @@ int main(int argc, char** argv)
 
     std::cout << "Reading data... ";
     timer.Start();
-    auto train = ReadTexMex<float>(argv[1], 128, -1);
+    auto train = ::ReadTexMex<float>(argv[1], 128, -1);
     double elapsed = timer.Stop();
     std::cout << "Done in " << elapsed << " seconds.\n";
     {
