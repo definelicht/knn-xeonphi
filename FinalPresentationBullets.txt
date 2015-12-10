@@ -7,6 +7,7 @@
 2.) Tree-Build
     - Work-Stealing approach (refers to stuff from lecture)
     - TBB is used (justify why)
+    - what about CILK?
     - Scaling against FLANN on CPU
 
 3.) kNN-Search
