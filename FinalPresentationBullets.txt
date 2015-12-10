@@ -1,0 +1,18 @@
+0.) Briefly introduce problem again:
+    - Randomized KD-Trees (example application)
+    - What is our focus? -> Parallelize tree build & search
+
+1.) Introduce benchmark code (FLANN)
+
+2.) Tree-Build
+    - Work-Stealing approach (refers to stuff from lecture)
+    - TBB is used (justify why)
+    - Scaling against FLANN on CPU
+
+3.) kNN-Search
+    - Briefly explain how it works
+    - Show performance agianst FLANN on CPU
+
+4.) Xeon Phi
+    - Achieved Gflop/s / GB/s (briefly)
+    - Discuss issues/difficulties
