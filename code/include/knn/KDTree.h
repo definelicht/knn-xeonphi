@@ -15,6 +15,9 @@
 
 #include "knn/BoundedHeap.h"
 #include "knn/Common.h"
+#ifdef KNN_USE_MPI
+#include "knn/Mpi.h"
+#endif
 #include "knn/Random.h"
 
 namespace knn {
@@ -80,6 +83,11 @@ public:
                        Pivot pivot = Pivot::median, int nVarianceSamples = 100,
                        int nHighestVariances = Dim > 10 ? 5 : Dim / 2,
                        bool parallel = true);
+
+#ifdef KNN_USE_MPI
+  static void ScatterTreesMPI(std::vector<KDTree<T, Dim, true>> &trees,
+                              int nTrees, int treeSize, int root = 0);
+#endif
 
 private:
   using IndexItr =
@@ -325,7 +333,7 @@ KDTree<T, Dim, Randomized>::BuildRandomizedTrees(
       "BuildRandomizedTrees: input iterators must support random access.");
   if (nTrees < 1) {
     throw std::invalid_argument(
-        "BuildRandomizedTrees: number of trees must be >= 0.");
+        "BuildRandomizedTrees: number of trees must be > 0.");
   }
   std::vector<KDTree<T, Dim, true>> trees(nTrees);
   if (parallel) {
@@ -342,5 +350,33 @@ KDTree<T, Dim, Randomized>::BuildRandomizedTrees(
   }
   return trees;
 }
+
+#ifdef KNN_USE_MPI
+template <typename T, unsigned Dim, bool Randomized>
+void KDTree<T, Dim, Randomized>::ScatterTreesMPI(
+    std::vector<KDTree<T, Dim, true>> &trees, const int nTrees,
+    const int treeSize, const int root) {
+  const auto nodeMpiType = mpi::CreateDataType<4>(
+      {sizeof(int), sizeof(int), sizeof(int), sizeof(int)},
+      {offsetof(Node, index), offsetof(Node, splitDim), offsetof(Node, left),
+       offsetof(Node, right)},
+      {MPI_INT, MPI_INT, MPI_INT, MPI_INT});
+  if (mpi::rank() != root) {
+    trees.resize(nTrees);
+    for (int i = 0; i < nTrees; ++i) {
+      trees[i].tree_.resize(treeSize);
+    }
+  }
+  std::vector<MPI_Request> requests(nTrees);
+  for (int i = 0; i < nTrees; ++i) {
+    // Distribute built trees to all ranks
+    MPI_Ibcast(trees[i].tree_.data(), trees[i].tree_.size(), nodeMpiType, root,
+               MPI_COMM_WORLD, &requests[i]);
+    // MPI_Bcast(trees[i].tree_.data(), sizeof(Node) * trees[i].tree_.size(),
+    //           MPI_CHAR, root, MPI_COMM_WORLD);
+  }
+  mpi::WaitAll(requests);
+}
+#endif
 
 } // End namespace knn

@@ -103,6 +103,30 @@ MPI_Request ReceiveAsync(IteratorType begin, const IteratorType end,
   return request;
 }
 
+template <typename InputIterator, typename = CheckRandomAccess<InputIterator>>
+void Broadcast(InputIterator begin, const InputIterator end, const int root,
+               MPI_Comm comm = MPI_COMM_WORLD) {
+  const int nElements = std::distance(begin, end);
+  MPI_Bcast(
+      &(*begin), nElements,
+      MpiType<
+          typename std::iterator_traits<InputIterator>::value_type>::value(),
+      root, comm);
+}
+
+template <typename InputIterator, typename = CheckRandomAccess<InputIterator>>
+MPI_Request BroadcastAsync(InputIterator begin, const InputIterator end,
+                           const int root, MPI_Comm comm = MPI_COMM_WORLD) {
+  const int nElements = std::distance(begin, end);
+  MPI_Request request;
+  MPI_Ibcast(
+      &(*begin), nElements,
+      MpiType<
+          typename std::iterator_traits<InputIterator>::value_type>::value(),
+      root, comm, &request);
+  return request;
+}
+
 template <typename SendIterator, typename ReceiveIterator,
           typename = CheckRandomAccess<SendIterator>,
           typename = CheckRandomAccess<ReceiveIterator>>
@@ -195,6 +219,17 @@ WaitAll(ContainerType<MPI_Request, std::allocator<MPI_Request>> &requests) {
       requests.size());
   MPI_Waitall(requests.size(), requests.data(), statuses.data());
   return statuses;
+}
+
+template <unsigned NFields>
+MPI_Datatype CreateDataType(std::array<int, NFields> const &sizes,
+                            std::array<MPI_Aint, NFields> const &offsets,
+                            std::array<MPI_Datatype, NFields> const &types) {
+  MPI_Datatype output;
+  MPI_Type_create_struct(NFields, sizes.data(), offsets.data(), types.data(),
+                         &output);
+  MPI_Type_commit(&output);
+  return output;
 }
 
 class Context {
