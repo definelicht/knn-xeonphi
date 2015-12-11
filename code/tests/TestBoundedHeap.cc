@@ -7,8 +7,12 @@ using namespace knn;
 int main() {
   auto comp = [](std::pair<float, int> const &a,
                  std::pair<float, int> const &b) { return a.first < b.first; };
-  BoundedHeap<std::pair<float, int>, true> heapEvict(3, comp);
-  BoundedHeap<std::pair<float, int>, false> heapNoEvict(3, comp);
+  std::vector<std::pair<float, int>> heapEvictVec(3);
+  std::vector<std::pair<float, int>> heapNoEvictVec(3);
+  BoundedHeap<typename decltype(heapEvictVec)::iterator, true> heapEvict(
+      heapEvictVec.begin(), heapEvictVec.end(), comp);
+  BoundedHeap<typename decltype(heapNoEvictVec)::iterator, false> heapNoEvict(
+      heapNoEvictVec.begin(), heapNoEvictVec.end(), comp);
 
   auto evictAssume = [&](float high, float low) {
     assert(heapEvict.Max().first == high);
@@ -30,15 +34,14 @@ int main() {
   assert(heapEvict.TryPush(std::make_pair(3, 3)));
   assert(heapEvict.TryPush(std::make_pair(4, 4)));
   evictAssume(4, 2);
-  assert(!heapEvict.TryPush(std::make_pair(5, 5)));
+  assert(heapEvict.TryPush(std::make_pair(5, 5)));
   evictAssume(4, 2);
   assert(heapEvict.TryPush(std::make_pair(1, 1)));
   evictAssume(3, 1);
-  auto heapEvictContent = heapEvict.Destroy();
-  std::sort_heap(heapEvictContent.begin(), heapEvictContent.end(), comp);
-  assert(heapEvictContent[0].second == 1);
-  assert(heapEvictContent[1].second == 2);
-  assert(heapEvictContent[2].second == 3);
+  std::sort_heap(heapEvictVec.begin(), heapEvictVec.end(), comp);
+  assert(heapEvictVec[0].second == 1);
+  assert(heapEvictVec[1].second == 2);
+  assert(heapEvictVec[2].second == 3);
 
   assert(heapNoEvict.TryPush(std::make_pair(3, 3)));
   noEvictAssume(3, 3);
@@ -50,11 +53,10 @@ int main() {
   noEvictAssume(4, 2);
   assert(!heapNoEvict.TryPush(std::make_pair(1, 1)));
   noEvictAssume(4, 2);
-  auto heapNoEvictContent = heapNoEvict.Destroy(); 
-  std::sort_heap(heapNoEvictContent.begin(), heapNoEvictContent.end(), comp);
-  assert(heapNoEvictContent[0].second == 2);
-  assert(heapNoEvictContent[1].second == 3);
-  assert(heapNoEvictContent[2].second == 4);
+  std::sort_heap(heapNoEvictVec.begin(), heapNoEvictVec.end(), comp);
+  assert(heapNoEvictVec[0].second == 2);
+  assert(heapNoEvictVec[1].second == 3);
+  assert(heapNoEvictVec[2].second == 4);
 
   return 0;
 }

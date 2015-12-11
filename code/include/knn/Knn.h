@@ -27,12 +27,13 @@ bool CompareNeighbors(std::pair<DistType, T> const &a,
   }
 }
 
-template <unsigned Dim, typename DistType, typename DataIterator>
+template <unsigned Dim, typename DistType, typename DataIterator,
+          typename NeighborIterator>
 void KnnExactRecurse(
     typename KDTree<typename std::iterator_traits<DataIterator>::value_type,
                     Dim, false>::Node const *const tree,
     const int treeIndex, const DataIterator data, const DataIterator query,
-    const size_t k, BoundedHeap<std::pair<DistType, int>, true> &neighbors,
+    const size_t k, BoundedHeap<NeighborIterator, true> &neighbors,
     std::function<DistType(DataIterator, DataIterator)> distFunc) {
 
   if (treeIndex < 0) {
@@ -68,21 +69,18 @@ void KnnExactRecurse(
   }
 }
 
-template <unsigned Dim, typename DistType, typename DataIterator>
+template <unsigned Dim, typename DistType, typename DataIterator,
+          typename BranchIterator, typename NeighborIterator>
 void KnnApproximateRecurse(
     typename KDTree<typename std::iterator_traits<DataIterator>::value_type,
                     Dim, true>::Node const *const tree,
     const int treeIndex, const DataIterator data, const DataIterator query,
     const int k, const int maxLeaves,
     std::function<DistType(DataIterator, DataIterator)> const &distFunc,
-    BoundedHeap<
-        std::tuple<DistType, typename KDTree<typename std::iterator_traits<
-                                                 DataIterator>::value_type,
-                                             Dim, true>::Node const *,
-                   int>,
-        false> &branchesToCheck,
-    DistType minDistToBoundary, std::vector<bool> &binsChecked,
-    BoundedHeap<std::pair<DistType, int>, true> &neighbors, int &nSearched) {
+    BoundedHeap<BranchIterator, false> &branchesToCheck,
+    DistType minDistToBoundary,
+    std::vector<bool, tbb::scalable_allocator<bool>> &binsChecked,
+    BoundedHeap<NeighborIterator, true> &neighbors, int &nSearched) {
 
   if (neighbors.isFull() &&
       (nSearched >= maxLeaves || minDistToBoundary >= neighbors.Max().first)) {
@@ -116,7 +114,7 @@ void KnnApproximateRecurse(
   branchesToCheck.TryPush(
       std::make_tuple(minDistToBoundaryBranch, tree, otherChild));
   // Now continue recurse the most promising branch
-  KnnApproximateRecurse<Dim, DistType, DataIterator>(
+  KnnApproximateRecurse<Dim, DistType>(
       tree, bestChild, data, query, k, maxLeaves, distFunc, branchesToCheck,
       minDistToBoundary, binsChecked, neighbors, nSearched);
 }
@@ -127,73 +125,125 @@ void KnnApproximateRecurse(
 // Implementations
 ////////////////////////////////////////////////////////////////////////////////
 
-template <unsigned Dim, typename DistType, typename DataIterator>
-std::vector<std::pair<DistType, int>>
-KnnLinear(const DataIterator trainingBegin, const DataIterator trainingEnd,
-          const DataIterator query, const int k,
-          const std::function<DistType(DataIterator, DataIterator)> distFunc) {
+template <unsigned Dim, typename DistType, typename DataIterator,
+          typename OutputIterator>
+void KnnLinear(
+    const DataIterator trainingBegin, const DataIterator trainingEnd,
+    const DataIterator query, const int k,
+    const std::function<DistType(DataIterator, DataIterator)> distFunc,
+    const OutputIterator neighborsBegin) {
   const size_t nPoints = std::distance(trainingBegin, trainingEnd) / Dim;
-  BoundedHeap<std::pair<DistType, int>, true> neighbors(
-      k, CompareNeighbors<DistType, int>);
+  BoundedHeap<OutputIterator, true> neighbors(
+      neighborsBegin, neighborsBegin + k, CompareNeighbors<DistType, int>);
   DataIterator currComp = trainingBegin;
   // Compare to all training points
   for (size_t i = 0; i < nPoints; ++i, currComp += Dim) {
     neighbors.TryPush(std::make_pair(distFunc(query, currComp), i));
   }
-  auto heapContent = neighbors.Destroy();
-  return heapContent;
 }
 
 template <unsigned Dim, typename DistType, typename DataIterator>
-std::vector<std::vector<std::pair<DistType, int>>> KnnLinear(
-    const DataIterator trainingBegin, const DataIterator trainingEnd,
-    const DataIterator queryBegin, const DataIterator queryEnd, const int k, 
-    const std::function<DistType(DataIterator, DataIterator)> distFunc) {
-  const int nQueries = std::distance(queryBegin, queryEnd) / Dim;
-  std::vector<std::vector<std::pair<DistType, int>>> neighbors(nQueries);
-  tbb::parallel_for(0, nQueries, [&](int i) {
-    neighbors[i] = KnnLinear<Dim, DistType>(trainingBegin, trainingEnd,
-                                            queryBegin + i * Dim, k, distFunc);
-  });
+std::vector<std::pair<DistType, int>,
+            tbb::scalable_allocator<std::pair<DistType, int>>>
+KnnLinear(const DataIterator trainingBegin, const DataIterator trainingEnd,
+          const DataIterator query, const int k,
+          const std::function<DistType(DataIterator, DataIterator)> distFunc) {
+  std::vector<std::pair<DistType, int>,
+              tbb::scalable_allocator<std::pair<DistType, int>>> neighbors(k);
+  KnnLinear<Dim, DistType>(trainingBegin, trainingEnd, query, k, distFunc,
+                           neighbors.begin());
   return neighbors;
 }
 
 template <unsigned Dim, typename DistType, typename DataIterator>
-std::vector<std::pair<DistType, int>>
+std::vector<std::pair<DistType, int>,
+            tbb::scalable_allocator<std::pair<DistType, int>>>
+KnnLinear(const DataIterator trainingBegin, const DataIterator trainingEnd,
+          const DataIterator queryBegin, const DataIterator queryEnd,
+          const int k,
+          const std::function<DistType(DataIterator, DataIterator)> distFunc) {
+  const int nQueries = std::distance(queryBegin, queryEnd) / Dim;
+  std::vector<std::pair<DistType, int>,
+              tbb::scalable_allocator<std::pair<DistType, int>>>
+      neighbors(nQueries * k);
+  tbb::parallel_for(0, nQueries, [&](int i) {
+    KnnLinear<Dim, DistType>(trainingBegin, trainingEnd, queryBegin + i * Dim,
+                             k, distFunc, neighbors.begin() + i * k);
+  });
+  return neighbors;
+}
+template <unsigned Dim, typename DistType, typename DataIterator,
+          typename OutputIterator>
+void KnnExact(
+    KDTree<typename std::iterator_traits<DataIterator>::value_type, Dim,
+           false> const &kdTree,
+    const DataIterator data, const DataIterator query, const int k,
+    const std::function<DistType(DataIterator, DataIterator)> distFunc,
+    const OutputIterator outputBegin) {
+  BoundedHeap<OutputIterator, true> neighbors(outputBegin, outputBegin + k,
+                                              CompareNeighbors<DistType, int>);
+  KnnExactRecurse<Dim, DistType>(kdTree.data(), 0, data, query, k, neighbors,
+                                 distFunc);
+}
+
+template <unsigned Dim, typename DistType, typename DataIterator>
+std::vector<std::pair<DistType, int>,
+            tbb::scalable_allocator<std::pair<DistType, int>>>
 KnnExact(KDTree<typename std::iterator_traits<DataIterator>::value_type, Dim,
                 false> const &kdTree,
          const DataIterator data, const DataIterator query, const int k,
          const std::function<DistType(DataIterator, DataIterator)> distFunc) {
-  BoundedHeap<std::pair<DistType, int>, true> neighbors(
-      k, CompareNeighbors<DistType, int>);
-  KnnExactRecurse<Dim, DistType>(kdTree.data(), 0, data, query, k, neighbors,
-                                 distFunc);
-  auto heapContent = neighbors.Destroy();
-  return heapContent;
+  std::vector<std::pair<DistType, int>,
+              tbb::scalable_allocator<std::pair<DistType, int>>> neighbors(k);
+  KnnExact(kdTree, data, query, k, distFunc, neighbors.begin());
+  return neighbors;
 }
 
 template <unsigned Dim, typename DistType, typename DataIterator>
-std::vector<std::vector<std::pair<DistType, int>>>
+std::vector<std::pair<DistType, int>,
+            tbb::scalable_allocator<std::pair<DistType, int>>>
 KnnExact(KDTree<typename std::iterator_traits<DataIterator>::value_type, Dim,
                 false> const &kdTree,
          const DataIterator data, const DataIterator queryBegin,
          const DataIterator queryEnd, const int k,
          const std::function<DistType(DataIterator, DataIterator)> distFunc) {
   const int nQueries = std::distance(queryBegin, queryEnd) / Dim;
-  std::vector<std::vector<std::pair<DistType, int>>> neighbors(nQueries);
+  std::vector<std::pair<DistType, int>,
+              tbb::scalable_allocator<std::pair<DistType, int>>>
+      neighbors(k * nQueries);
   tbb::parallel_for(0, nQueries, [&](int i) {
-    neighbors[i] = KnnExact(kdTree, data, queryBegin + i * Dim, k, distFunc);
+    KnnExact(kdTree, data, queryBegin + i * Dim, k, distFunc,
+             neighbors.begin() + i * k);
   });
   return neighbors;
 }
 
-template <unsigned Dim, typename DistType, typename DataIterator>
-std::vector<std::pair<DistType, int>> KnnApproximate(
+template <unsigned Dim, typename DistType, typename DataIterator,
+          typename OutputIterator>
+std::vector<std::pair<DistType, int>,
+            tbb::scalable_allocator<std::pair<DistType, int>>>
+KnnApproximate(
     std::vector<KDTree<typename std::iterator_traits<DataIterator>::value_type,
                        Dim, true>> const &randTrees,
     const DataIterator data, const DataIterator query, const int k,
     const int maxLeaves,
     const std::function<DistType(DataIterator, DataIterator)> distFunc) {
+  std::vector<std::pair<DistType, int>,
+              tbb::scalable_allocator<std::pair<DistType, int>>> neighbors(k);
+  KnnApproximate(randTrees, data, query, k, maxLeaves, distFunc,
+                 neighbors.begin());
+  return neighbors;
+}
+
+template <unsigned Dim, typename DistType, typename DataIterator,
+          typename OutputIterator>
+void KnnApproximate(
+    std::vector<KDTree<typename std::iterator_traits<DataIterator>::value_type,
+                       Dim, true>> const &randTrees,
+    const DataIterator data, const DataIterator query, const int k,
+    const int maxLeaves,
+    const std::function<DistType(DataIterator, DataIterator)> distFunc,
+    const OutputIterator neighborsBegin) {
 
   // A branch records the minimum distance from the point to any leaf in that
   // branch, as well as an iterator to the node entry in the tree
@@ -203,17 +253,20 @@ std::vector<std::pair<DistType, int>> KnnApproximate(
   using Branch = std::tuple<DistType, Tree, int>;
   // Use negated comparison in heap so lowest distances are at the top.
   // When the heap is full, simply reject new values.
-  BoundedHeap<Branch, false> branchesToCheck(
-      maxLeaves, [](Branch const &a, Branch const &b) {
+  std::vector<Branch, tbb::scalable_allocator<Branch>> branchVec(maxLeaves);
+  BoundedHeap<typename decltype(branchVec)::iterator, false> branchesToCheck(
+      branchVec.begin(), branchVec.end(), [](Branch const &a, Branch const &b) {
         return std::get<0>(a) >= std::get<0>(b);
       });
   // Keep track of leaf nodes already inspected
-  std::vector<bool> binsChecked(randTrees[0].nLeaves(), false);
+  std::vector<bool, tbb::scalable_allocator<bool>> binsChecked(
+      randTrees[0].nLeaves(), false);
   // Heap of nearest neighbors. Top of the heap will be the highest distance
   // found, but will keep track of the k lowest distances found.
   // An entry is the distance to the neighbor and the neighbor's index in the
   // training data set.
-  BoundedHeap<std::pair<DistType, int>, true> neighbors(k);
+  BoundedHeap<OutputIterator, true> neighbors(
+      neighborsBegin, neighborsBegin + k, CompareNeighbors<DistType, int>);
   // Count number of leaves searched as termination criterion
   int nSearched = 0;
 
@@ -234,23 +287,24 @@ std::vector<std::pair<DistType, int>> KnnApproximate(
         k, maxLeaves, distFunc, branchesToCheck, std::get<0>(branchToSearch),
         binsChecked, neighbors, nSearched);
   }
-  
-  auto heapContent = neighbors.Destroy();
-  return heapContent;
 }
 
 template <unsigned Dim, typename DistType, typename DataIterator>
-std::vector<std::vector<std::pair<DistType, int>>> KnnApproximate(
+std::vector<std::pair<DistType, int>,
+            tbb::scalable_allocator<std::pair<DistType, int>>>
+KnnApproximate(
     std::vector<KDTree<typename std::iterator_traits<DataIterator>::value_type,
                        Dim, true>> const &randTrees,
     const DataIterator data, const DataIterator queryBegin,
     const DataIterator queryEnd, const int k, const int maxLeaves,
     std::function<DistType(DataIterator, DataIterator)> distFunc) {
   const int nQueries = std::distance(queryBegin, queryEnd) / Dim;
-  std::vector<std::vector<std::pair<DistType, int>>> neighbors(nQueries);
+  std::vector<std::pair<DistType, int>,
+              tbb::scalable_allocator<std::pair<DistType, int>>>
+      neighbors(k * nQueries);
   tbb::parallel_for(0, nQueries, [&](int i) {
-    neighbors[i] = KnnApproximate(randTrees, data, queryBegin + i * Dim, k,
-                                  maxLeaves, distFunc);
+    KnnApproximate(randTrees, data, queryBegin + i * Dim, k, maxLeaves,
+                   distFunc, neighbors.begin() + i * k);
   });
   return neighbors;
 }

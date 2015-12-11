@@ -24,6 +24,7 @@ if (Flann_FOUND)
   set(KNN_LIBS ${KNN_LIBS} ${Flann_LIBS})
   set(KNN_APPS_SRC ${KNN_APPS_SRC} TestFlann.cpp)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DKNN_USE_FLANN")
+  message("Found FLANN in ${Flann_LIBS}")
 endif()
 
 find_package(Vc)

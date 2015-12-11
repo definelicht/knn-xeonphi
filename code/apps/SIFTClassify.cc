@@ -79,13 +79,14 @@ int main(int argc, char const *argv[]) {
   index.knnSearch(flannTest, flannIndices, flannDists, k,
                   flann::SearchParams(maxChecks));
   double elapsedFlannSearch = timer.Stop();
-  std::vector<std::vector<std::pair<float, size_t>>> resultKdTreeFlann(nTest);
+  std::vector<std::pair<float, int>> resultKdTreeFlann;
   for (int i = 0; i < nTest; ++i) {
     for (int j = 0; j < k; ++j) {
-      resultKdTreeFlann[i].emplace_back(
+      resultKdTreeFlann.emplace_back(
           std::make_pair(flannDists[i][j], flannIndices[i][j]));
     }
   }
+  std::cout << nTest << " * " << k << " = " << nTest*k << " vs. " << resultKdTreeFlann.size() << "\n";
   std::cout << "Done in " << elapsedFlannSearch << " seconds.\n";
 #endif
 
@@ -125,26 +126,33 @@ int main(int argc, char const *argv[]) {
                         std::pair<float, size_t> const &b) {
     return a.second < b.second;
   };
+  assert(groundTruth.size() == nTest*k);
+  assert(resultLinear.size() == nTest*k);
+  assert(resultKdTree.size() == nTest*k);
+  assert(resultRandomized.size() == nTest*k);
+  assert(resultKdTreeFlann.size() == nTest*k);
   #pragma omp parallel for reduction(+ : equalLinear, equalKdTree)
   for (int i = 0; i < nTest; ++i) {
     std::sort(groundTruth.begin() + i * k, groundTruth.begin() + (i + 1) * k);
-    std::sort(resultLinear[i].begin(), resultLinear[i].end(), sortByIndex);
-    std::sort(resultKdTree[i].begin(), resultKdTree[i].end(), sortByIndex);
-    std::sort(resultRandomized[i].begin(), resultRandomized[i].end(),
+    std::sort(resultLinear.begin() + i * k, resultLinear.begin() + (i + 1) * k,
               sortByIndex);
+    std::sort(resultKdTree.begin() + i * k, resultKdTree.begin() + (i + 1) * k,
+              sortByIndex);
+    std::sort(resultRandomized.begin() + i * k,
+              resultRandomized.begin() + (i + 1) * k, sortByIndex);
 #ifdef KNN_USE_FLANN
-    std::sort(resultKdTreeFlann[i].begin(), resultKdTreeFlann[i].end(),
-              sortByIndex);
+    std::sort(resultKdTreeFlann.begin() + i * k,
+              resultKdTreeFlann.begin() + (i + 1) * k, sortByIndex);
 #endif
-    auto iLinear = resultLinear[i].cbegin();
-    auto iLinearEnd = resultLinear[i].cend();
-    auto iKd = resultKdTree[i].cbegin();
-    auto iKdEnd = resultKdTree[i].cend();
-    auto iRand = resultRandomized[i].cbegin();
-    auto iRandEnd = resultRandomized[i].cend();
+    auto iLinear = resultLinear.cbegin() + i * k;
+    auto iLinearEnd = resultLinear.cbegin() + (i + 1) * k;
+    auto iKd = resultKdTree.cbegin() + i * k;
+    auto iKdEnd = resultKdTree.cbegin() + (i + 1) * k;
+    auto iRand = resultRandomized.cbegin() + i * k;
+    auto iRandEnd = resultRandomized.cbegin() + (i + 1) * k;
 #ifdef KNN_USE_FLANN
-    auto iKdFlann = resultKdTreeFlann[i].cbegin();
-    auto iKdFlannEnd = resultKdTreeFlann[i].cend();
+    auto iKdFlann = resultKdTreeFlann.cbegin() + i * k;
+    auto iKdFlannEnd = resultKdTreeFlann.cbegin() + (i + 1) * k;
 #endif
     for (auto iGt = groundTruth.cbegin() + i * k,
               iGtEnd = groundTruth.cend() + (i + 1) * k;
