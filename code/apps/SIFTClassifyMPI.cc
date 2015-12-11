@@ -1,3 +1,4 @@
+#include <iostream>
 #include "knn/BinaryIO.h"
 #include "knn/KDTree.h"
 #include "knn/Knn.h"
