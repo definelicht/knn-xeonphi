@@ -26,7 +26,7 @@ template <typename T, unsigned Dim, bool Randomized>
 class alignas(64) KDTree {
 
 public:
-  struct alignas(64) Node {
+  struct alignas(16) Node {
     int index;
     int splitDim;
     int left, right;
@@ -85,7 +85,7 @@ public:
                        bool parallel = true);
 
 #ifdef KNN_USE_MPI
-  static void ScatterTreesMPI(std::vector<KDTree<T, Dim, true>> &trees,
+  static void BroadcastTreesMPI(std::vector<KDTree<T, Dim, true>> &trees,
                               int nTrees, int treeSize, int root = 0);
 #endif
 
@@ -353,14 +353,14 @@ KDTree<T, Dim, Randomized>::BuildRandomizedTrees(
 
 #ifdef KNN_USE_MPI
 template <typename T, unsigned Dim, bool Randomized>
-void KDTree<T, Dim, Randomized>::ScatterTreesMPI(
+void KDTree<T, Dim, Randomized>::BroadcastTreesMPI(
     std::vector<KDTree<T, Dim, true>> &trees, const int nTrees,
     const int treeSize, const int root) {
-  const auto nodeMpiType = mpi::CreateDataType<4>(
-      {sizeof(int), sizeof(int), sizeof(int), sizeof(int)},
-      {offsetof(Node, index), offsetof(Node, splitDim), offsetof(Node, left),
-       offsetof(Node, right)},
-      {MPI_INT, MPI_INT, MPI_INT, MPI_INT});
+  // const auto nodeMpiType = mpi::CreateDataType<4>(
+  //     {sizeof(int), sizeof(int), sizeof(int), sizeof(int)},
+  //     {offsetof(Node, index), offsetof(Node, splitDim), offsetof(Node, left),
+  //      offsetof(Node, right)},
+  //     {MPI_INT, MPI_INT, MPI_INT, MPI_INT});
   if (mpi::rank() != root) {
     trees.resize(nTrees);
     for (int i = 0; i < nTrees; ++i) {
@@ -370,10 +370,11 @@ void KDTree<T, Dim, Randomized>::ScatterTreesMPI(
   std::vector<MPI_Request> requests(nTrees);
   for (int i = 0; i < nTrees; ++i) {
     // Distribute built trees to all ranks
-    MPI_Ibcast(trees[i].tree_.data(), trees[i].tree_.size(), nodeMpiType, root,
-               MPI_COMM_WORLD, &requests[i]);
-    // MPI_Bcast(trees[i].tree_.data(), sizeof(Node) * trees[i].tree_.size(),
-    //           MPI_CHAR, root, MPI_COMM_WORLD);
+    // TODO: HACK HACK HACK HACK
+    MPI_Ibcast(trees[i].tree_.data(), sizeof(Node) * trees[i].tree_.size(),
+               MPI_CHAR, root, MPI_COMM_WORLD, &requests[i]);
+    //  MPI_Ibcast(trees[i].tree_.data(), trees[i].tree_.size(), nodeMpiType, root,
+    //             MPI_COMM_WORLD, &requests[i]);
   }
   mpi::WaitAll(requests);
 }

@@ -74,9 +74,6 @@ endif()
 
 message(STATUS "Compiling with flags: ${CMAKE_CXX_FLAGS}")
 
-set(KNN_SRC ${KNN_SRC}
-    BinaryIO.cc)
-
 set(KNN_APPS_SRC ${KNN_APPS_SRC}
     SIFTClassify.cc
     TestTreeBuildParallel.cpp)
@@ -106,9 +103,9 @@ foreach(SRC_FILE ${KNN_TEST_SRC})
   add_test(${TEST_FILE_NAME} ${TEST_FILE_NAME})
 endforeach()
 
-add_library(knn ${KNN_SRC_PATHS})
-target_link_libraries(knn ${KNN_LIBS})
-set(KNN_LIBS ${KNN_LIBS} knn)
+# add_library(knn ${KNN_SRC_PATHS})
+# target_link_libraries(knn ${KNN_LIBS})
+# set(KNN_LIBS ${KNN_LIBS} knn)
 foreach(EXEC_PATH ${KNN_EXEC_PATHS})
   get_filename_component(EXEC_FILE_NAME ${EXEC_PATH} NAME_WE)
   if (MIC)

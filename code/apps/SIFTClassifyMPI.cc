@@ -42,8 +42,8 @@ int main(int argc, char *argv[]) {
     std::cout << "Reading data... " << std::flush;
   }
   timer.Start();
-  std::vector<float> train, test;
-  std::vector<int> groundTruth;
+  std::vector<float, tbb::cache_aligned_allocator<float>> train, test;
+  std::vector<int, tbb::cache_aligned_allocator<int>> groundTruth;
   using DataItr = typename decltype(train)::const_iterator;
   std::array<int, 2> dataSizes;
   if (mpiRank == 0) {
@@ -77,11 +77,11 @@ int main(int argc, char *argv[]) {
   }
   if (mpiRank == 0) {
     std::cout << "Done in " << timer.Stop() << " seconds.\n" << std::flush;
-    std::cout << "Scattering trees... " << std::flush;
+    std::cout << "Broadcasting trees... " << std::flush;
   }
   timer.Start();
-  knn::KDTree<float, 128, true>::ScatterTreesMPI(kdTrees, nTrees,
-                                                 2 * nTrain - 1, 0);
+  knn::KDTree<float, 128, true>::BroadcastTreesMPI(kdTrees, nTrees,
+                                                   2 * nTrain - 1, 0);
   if (mpiRank == 0) {
     std::cout << "Done in " << timer.Stop() << " seconds.\n" << std::flush;
   }
@@ -94,34 +94,66 @@ int main(int argc, char *argv[]) {
   for (int i = 1; i < mpiSize; ++i) {
     begin[i] = nTest * (i - 1) / (mpiSize - 1);
     end[i] = nTest * i / (mpiSize - 1);
-    outputSizes[i] = end[i] - begin[i]; 
+    outputSizes[i] = k * (end[i] - begin[i]);
   }
-  // Rank 0 will return immediately as begin == end
   std::vector<std::pair<float, int>,
               tbb::scalable_allocator<std::pair<float, int>>> results;
   if (mpiRank == 0) {
     results.resize(k * nTest);
   }
   timer.Start();
+  knn::Timer timerMemory;
   if (mpiRank != 0) {
     results = knn::KnnApproximate<128, float, DataItr>(
-        kdTrees, train.cbegin(), test.cbegin() + begin[mpiRank],
-        test.cbegin() + end[mpiRank], k, maxChecks,
+        kdTrees, train.cbegin(), test.cbegin() + 128 * begin[mpiRank],
+        test.cbegin() + 128 * end[mpiRank], k, maxChecks,
         knn::SquaredEuclidianDistance<DataItr, 128>);
   }
-  return 0;
   double elapsed = timer.Stop();
-  using PairType = std::pair<float, int>;
-  const auto mpiType = knn::mpi::CreateDataType<2>(
-      {sizeof(float), sizeof(int)},
-      {offsetof(PairType, first), offsetof(PairType, second)},
-      {MPI_FLOAT, MPI_INT});
-  MPI_Gatherv(results.data(), outputSizes[mpiRank], mpiType, results.data(),
-              outputSizes.data(), begin.data(), mpiType, 0, MPI_COMM_WORLD);
-  double elapsedCopy = timer.Stop();
+  // const auto mpiType = knn::mpi::CreateDataType<2>(
+  //     {sizeof(float), sizeof(int)},
+  //     {offsetof(PairType, first), offsetof(PairType, second)},
+  //     {MPI_FLOAT, MPI_INT});
+  // MPI_Gatherv(results.data(), outputSizes[mpiRank], mpiType, results.data(),
+  //             outputSizes.data(), begin.data(), mpiType, 0, MPI_COMM_WORLD);
+  std::for_each(outputSizes.begin(), outputSizes.end(),
+                [](int &x) { x *= sizeof(std::pair<float, int>); });
+  MPI_Gatherv(results.data(), outputSizes[mpiRank], MPI_CHAR, results.data(),
+              outputSizes.data(), begin.data(), MPI_CHAR, 0, MPI_COMM_WORLD);
+  MPI_Barrier(MPI_COMM_WORLD);
+  double elapsedCopy = timerMemory.Stop();
   if (mpiRank != 0) {
     std::cout << "Search done in " << elapsedCopy << " seconds (" << elapsed
               << " excluding memory transfer).\n";
+  }
+  if (mpiRank == 0) {
+    int equal = 0;
+    for (int i = 0; i < nTest; ++i) {
+      std::sort(groundTruth.begin() + i * k, groundTruth.begin() + (i + 1) * k);
+      std::sort(
+          results.begin() + i * k, results.begin() + (i + 1) * k,
+          [](std::pair<float, int> const &a, std::pair<float, int> const &b) {
+            return a.second < b.second;
+          });
+      auto iResult = results.begin() + i * k;
+      const auto iResultEnd = results.begin() + (i + 1) * k;
+      for (auto iGt = groundTruth.cbegin() + i * k,
+                iGtEnd = groundTruth.cend() + (i + 1) * k;
+           iGt < iGtEnd; ++iGt) {
+        while (iResult < iResultEnd) {
+          if (static_cast<int>(iResult->second) == *iGt) {
+            ++iResult;
+            ++equal;
+            break;
+          } else if (static_cast<int>(iResult->second) > *iGt) {
+            break;
+          }
+          ++iResult;
+        }
+      }
+    }
+    std::cout << static_cast<float>(equal) / nTest
+              << "% classified correctly.\n";
   }
 
   return 0;
