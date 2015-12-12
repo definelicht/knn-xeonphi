@@ -90,6 +90,8 @@ if (KNN_USE_FLANN)
   set(KNN_SRC
     flann/ext/lz4.c
     flann/ext/lz4hc.c)
+  set(KNN_APPS_SRC ${KNN_APPS_SRC}
+    TestFlann.cpp)
 endif()
 
 set(KNN_APPS_SRC ${KNN_APPS_SRC}
@@ -121,9 +123,11 @@ foreach(SRC_FILE ${KNN_TEST_SRC})
   add_test(${TEST_FILE_NAME} ${TEST_FILE_NAME})
 endforeach()
 
-# add_library(knn ${KNN_SRC_PATHS})
-# target_link_libraries(knn ${KNN_LIBS})
-# set(KNN_LIBS ${KNN_LIBS} knn)
+if (KNN_SRC_PATHS)
+  add_library(knn ${KNN_SRC_PATHS})
+  target_link_libraries(knn ${KNN_LIBS})
+  set(KNN_LIBS ${KNN_LIBS} knn)
+endif()
 foreach(EXEC_PATH ${KNN_EXEC_PATHS})
   get_filename_component(EXEC_FILE_NAME ${EXEC_PATH} NAME_WE)
   if (MIC)

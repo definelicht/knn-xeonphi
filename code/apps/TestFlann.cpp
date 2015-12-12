@@ -72,8 +72,8 @@ int main(int argc, char** argv)
     flann::Matrix<float> flannTrain(train.data(), train.size()/128, 128);
     flann::Matrix<float> flannTest(test.data(), test.size()/128, 128);
     flann::Index<flann::L2<float> > index(flannTrain, flann::KDTreeIndexParams(1));
-    flann::Matrix<int> indices(new int[flannTest.rows*nn], flannTest.rows, k);
-    flann::Matrix<float> dists(new float[flannTest.rows*nn], flannTest.rows, k);
+    flann::Matrix<int> indices(new int[flannTest.rows*k], flannTest.rows, k);
+    flann::Matrix<float> dists(new float[flannTest.rows*k], flannTest.rows, k);
 
     std::cout << "Building randomized flann kd-tree with "
     << std::thread::hardware_concurrency()
@@ -100,7 +100,7 @@ int main(int argc, char** argv)
     std::cout
     << "FLANN KNN search using " << nTrees << " randomized approximate tree(s)... ";
     timer.Start();
-    index.knnSearch(flannTest, indices, dists, nn, flann::SearchParams(1000));
+    index.knnSearch(flannTest, indices, dists, k, flann::SearchParams(1000));
     elapsedFlann = timer.Stop();
     std::cout << "Done in " << elapsedFlann << " seconds. " << std::endl;
 
@@ -108,17 +108,12 @@ int main(int argc, char** argv)
     << "KNN search using " << nTrees << " randomized approximate tree(s)... ";
     timer.Start();
     auto resultRandomized = knn::KnnApproximate<128, float, DataItr>(
-        trees, train.cbegin(), test.cbegin(), test.cend(), nn, 1000,
+        trees, train.cbegin(), test.cbegin(), test.cend(), k, 1000,
         knn::SquaredEuclidianDistance<DataItr, 128>);
     elapsedParallel = timer.Stop();
     std::cout << "Done in " << elapsedParallel
     << " seconds.\nSpeedup: " << elapsedFlann / elapsedParallel
     << "\n";
-
-    // accuracy
-    for (size_t i = 0; i < groundTruth.size(); ++i)
-    {
-    }
 
     delete[] indices.ptr();
     delete[] dists.ptr();
