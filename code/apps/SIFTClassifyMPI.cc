@@ -54,6 +54,7 @@ int main(int argc, char *argv[]) {
     dataSizes[0] = train.size();
     dataSizes[1] = test.size();
   }
+  MPI_Barrier(MPI_COMM_WORLD);
   if (mpiRank == 0) {
     std::cout << "Done in " << timer.Stop() << " seconds.\n" << std::flush;
     std::cout << "Broadcasting data... " << std::flush;
@@ -66,6 +67,7 @@ int main(int argc, char *argv[]) {
   knn::mpi::Broadcast(test.begin(), test.end(), 0);
   const int nTrain = train.size() / 128;
   const int nTest = test.size() / 128;
+  MPI_Barrier(MPI_COMM_WORLD);
   if (mpiRank == 0) {
     std::cout << "Done in " << timer.Stop() << " seconds.\n" << std::flush;
     std::cout << "Building trees... " << std::flush;
@@ -76,6 +78,7 @@ int main(int argc, char *argv[]) {
     kdTrees = knn::KDTree<float, 128, true>::BuildRandomizedTrees(
         train.begin(), train.end(), nTrees);
   }
+  MPI_Barrier(MPI_COMM_WORLD);
   if (mpiRank == 0) {
     std::cout << "Done in " << timer.Stop() << " seconds.\n" << std::flush;
     std::cout << "Broadcasting trees... " << std::flush;
@@ -83,6 +86,7 @@ int main(int argc, char *argv[]) {
   timer.Start();
   knn::KDTree<float, 128, true>::BroadcastTreesMPI(kdTrees, nTrees,
                                                    2 * nTrain - 1, 0);
+  MPI_Barrier(MPI_COMM_WORLD);
   if (mpiRank == 0) {
     std::cout << "Done in " << timer.Stop() << " seconds.\n" << std::flush;
   }
@@ -102,30 +106,31 @@ int main(int argc, char *argv[]) {
   if (mpiRank == 0) {
     results.resize(k * nTest);
   }
-  timer.Start();
-  knn::Timer timerMemory;
+  MPI_Barrier(MPI_COMM_WORLD);
   if (mpiRank != 0) {
+    std::cout << "Performing search..." << std::flush;
+    timer.Start();
     results = knn::KnnApproximate<128, float, DataItr>(
         kdTrees, train.cbegin(), test.cbegin() + 128 * begin[mpiRank],
         test.cbegin() + 128 * end[mpiRank], k, maxChecks,
         knn::SquaredEuclidianDistance<DataItr, 128>);
+    std::cout << " Done in " << timer.Stop()
+              << " seconds.\nCopying back results..." << std::flush;
   }
-  double elapsed = timer.Stop();
   // const auto mpiType = knn::mpi::CreateDataType<2>(
   //     {sizeof(float), sizeof(int)},
   //     {offsetof(PairType, first), offsetof(PairType, second)},
   //     {MPI_FLOAT, MPI_INT});
   // MPI_Gatherv(results.data(), outputSizes[mpiRank], mpiType, results.data(),
   //             outputSizes.data(), begin.data(), mpiType, 0, MPI_COMM_WORLD);
+  timer.Start();
   std::for_each(outputSizes.begin(), outputSizes.end(),
                 [](int &x) { x *= sizeof(std::pair<float, int>); });
   MPI_Gatherv(results.data(), outputSizes[mpiRank], MPI_CHAR, results.data(),
               outputSizes.data(), begin.data(), MPI_CHAR, 0, MPI_COMM_WORLD);
   MPI_Barrier(MPI_COMM_WORLD);
-  double elapsedCopy = timerMemory.Stop();
   if (mpiRank != 0) {
-    std::cout << "Search done in " << elapsedCopy << " seconds (" << elapsed
-              << " excluding memory transfer).\n";
+    std::cout << "Done in " << timer.Stop() << " seconds.\n";
   }
   if (mpiRank == 0) {
     int equal = 0;
