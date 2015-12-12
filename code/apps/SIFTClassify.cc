@@ -8,7 +8,7 @@
 #include <string>
 #include <unordered_map>
 #ifdef KNN_USE_FLANN
-#include "flann/flann.hpp"
+#include <flann/flann.h>
 #endif
 
 int main(int argc, char const *argv[]) {
@@ -105,9 +105,8 @@ int main(int argc, char const *argv[]) {
   std::cout << "Build speedup over FLANN: " << elapsedFlannBuild / elapsed
             << ".\n";
 #endif
-  std::cout
-      << "Nearest neighbor search using 5 randomized approximate trees... "
-      << std::flush;
+  std::cout << "Nearest neighbor search using " << nTrees
+            << " randomized approximate trees... " << std::flush;
   timer.Start();
   auto resultRandomized = knn::KnnApproximate<128, float, DataItr>(
       trees, train.cbegin(), test.cbegin(), test.cend(), k, maxChecks,
