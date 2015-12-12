@@ -52,6 +52,11 @@ int main(int argc, char** argv)
         return 1;
     }
 
+    const int k = std::stoi(argv[4]);
+    int nQueries = -1;
+    if (argc >= 6) {
+        nQueries = std::stoi(argv[5]);
+    }
     const int nTrees = std::stoi(argv[1]);
 
     Timer timer;
@@ -63,21 +68,18 @@ int main(int argc, char** argv)
     double elapsed = timer.Stop();
     std::cout << "Done in " << elapsed << " seconds.\n";
 
+    //flann
     flann::Matrix<float> flannTrain(train.data(), train.size()/128, 128);
     flann::Matrix<float> flannTest(test.data(), test.size()/128, 128);
-    flann::Index<flann::L2<float>> index(flannTrain,
-                                         flann::KDTreeIndexParams(nTrees));
-
-    const int nn = 100;
-
-    flann::Matrix<int> indices(new int[flannTest.rows*nn], flannTest.rows, nn);
-    flann::Matrix<float> dists(new float[flannTest.rows*nn], flannTest.rows, nn);
+    flann::Index<flann::L2<float> > index(flannTrain, flann::KDTreeIndexParams(1));
+    flann::Matrix<int> indices(new int[flannTest.rows*nn], flannTest.rows, k);
+    flann::Matrix<float> dists(new float[flannTest.rows*nn], flannTest.rows, k);
 
     std::cout << "Building randomized flann kd-tree with "
     << std::thread::hardware_concurrency()
     << " available hardware threads... ";
     timer.Start();
-    index.buildIndex();                                                                                               
+    index.buildIndex();
     double elapsedFlann = timer.Stop();
     std::cout << "Done in " << elapsedFlann << " seconds." << std::endl;
 
@@ -91,7 +93,7 @@ int main(int argc, char** argv)
         train.cbegin(), train.cend(), nTrees,
         knn::KDTree<float, 128, true>::Pivot::median, 100);
     double elapsedParallel = timer.Stop();
-    std::cout << "Done in " << elapsedParallel 
+    std::cout << "Done in " << elapsedParallel
     << " seconds.\nSpeedup: " << elapsedFlann / elapsedParallel
     << "\n";
 
@@ -112,6 +114,11 @@ int main(int argc, char** argv)
     std::cout << "Done in " << elapsedParallel
     << " seconds.\nSpeedup: " << elapsedFlann / elapsedParallel
     << "\n";
+
+    // accuracy
+    for (size_t i = 0; i < groundTruth.size(); ++i)
+    {
+    }
 
     delete[] indices.ptr();
     delete[] dists.ptr();

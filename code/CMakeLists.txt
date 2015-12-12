@@ -25,17 +25,6 @@ if (KNN_USE_OPENMP)
   endif()
 endif()
 
-if (KNN_USE_FLANN)
-  find_package(Flann)
-  if (Flann_FOUND)
-    include_directories(AFTER SYSTEM ${Flann_INCLUDE_DIRS})
-    set(KNN_LIBS ${KNN_LIBS} ${Flann_LIBS})
-    set(KNN_APPS_SRC ${KNN_APPS_SRC} TestFlann.cpp)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DKNN_USE_FLANN")
-    message("Found FLANN in ${Flann_LIBS}")
-  endif()
-endif()
-
 if (KNN_USE_VC)
   find_package(Vc)
   if (Vc_FOUND)
@@ -96,6 +85,12 @@ if (CMAKE_BUILD_TYPE MATCHES Debug)
 endif()
 
 message(STATUS "Compiling with flags: ${CMAKE_CXX_FLAGS}")
+
+if (KNN_USE_FLANN)
+  set(KNN_SRC
+    flann/ext/lz4.c
+    flann/ext/lz4hc.c)
+endif()
 
 set(KNN_APPS_SRC ${KNN_APPS_SRC}
     SIFTClassify.cc
