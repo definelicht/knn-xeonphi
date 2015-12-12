@@ -1,4 +1,5 @@
 #pragma once
+#include <iostream>
 
 #include <algorithm>  // std::nth_element
 #include <functional> // std::function
@@ -172,13 +173,14 @@ KDTree<T, Dim, Randomized>::KDTree(const DataIterator begin,
     BuildTree<DataIterator>(begin, indices.begin(), indices.end(), 0, pivot,
                             nVarianceSamples, nHighestVariances, 1, 1);
   } else {
-    BuildTree<DataIterator>(begin, indices.begin(), indices.end(), 0, pivot,
-                            nVarianceSamples, nHighestVariances, 1,
+    int nThreads;
 #ifndef __MIC__
-                            std::thread::hardware_concurrency());
+    nThreads = std::thread::hardware_concurrency();
 #else
-                            240);
+    nThreads = 60;
 #endif
+    BuildTree<DataIterator>(begin, indices.begin(), indices.end(), 0, pivot,
+                            nVarianceSamples, nHighestVariances, 1, nThreads);
   }
 }
 
