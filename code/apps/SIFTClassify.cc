@@ -8,7 +8,7 @@
 #include <string>
 #include <unordered_map>
 #ifdef KNN_USE_FLANN
-#include <flann/flann.h>
+#include "flann/flann.hpp"
 #endif
 
 template <typename T>
