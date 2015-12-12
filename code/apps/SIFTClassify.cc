@@ -29,6 +29,9 @@ int main(int argc, char const *argv[]) {
 
   knn::Timer timer;
 
+  std::cout << "Available hardware concurrency: "
+            << std::thread::hardware_concurrency() << "\n";
+
   std::cout << "Reading data... " << std::flush;
   timer.Start();
   auto train = knn::ReadTexMex<float>(argv[1], 128, -1);
