@@ -26,6 +26,9 @@ int main(int argc, char *argv[]) {
     return 0;
   }
 
+  std::cout << "Rank " << mpiRank << " hardware concurrency: "
+            << std::thread::hardware_concurrency() << "\n";
+
   const std::string trainPath(argv[1]);
   const std::string labelPath(argv[2]);
   const std::string testPath(argv[3]);
