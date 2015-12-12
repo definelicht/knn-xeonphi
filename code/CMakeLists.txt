@@ -18,14 +18,6 @@ if (OpenMP_FOUND OR OPENMP_FOUND)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DKNN_USE_OMP ${OpenMP_CXX_FLAGS}")
 endif()
 
-find_package(Flann)
-if (Flann_FOUND)
-  include_directories(AFTER SYSTEM ${Flann_INCLUDE_DIRS})
-  set(KNN_LIBS ${KNN_LIBS} ${Flann_LIBS})
-  set(KNN_APPS_SRC ${KNN_APPS_SRC} TestFlann.cpp)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DKNN_USE_FLANN")
-endif()
-
 find_package(Vc)
 if (Vc_FOUND)
   include_directories(AFTER SYSTEM ${Vc_INCLUDE_DIR})
@@ -50,7 +42,7 @@ endif()
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -DKNN_USE_FLANN")
 if (MIC)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mmic -DKNN_USE_MIC")
 endif()
@@ -62,7 +54,9 @@ endif()
 message(STATUS "Compiling with flags: ${CMAKE_CXX_FLAGS}")
 
 set(KNN_SRC
-    BinaryIO.cc)
+  BinaryIO.cc
+  flann/ext/lz4.c
+  flann/ext/lz4hc.c)
 
 set(KNN_APPS_SRC ${KNN_APPS_SRC}
     SIFTClassify.cc
