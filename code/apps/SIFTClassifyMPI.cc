@@ -3,6 +3,7 @@
 #include "knn/KDTree.h"
 #include "knn/Knn.h"
 #include "knn/Mpi.h"
+#include "knn/ParseArguments.h"
 #include "knn/Timer.h"
 
 // This application is intended to be used with only one MPI worker on each
@@ -16,10 +17,11 @@ int main(int argc, char *argv[]) {
   const auto mpiRank = knn::mpi::rank();
   const auto mpiSize = knn::mpi::size();
 
-  if (argc < 7) {
+  if (argc < 5) {
     if (mpiRank == 0) {
       std::cerr << "Usage: <training data file> <label file> <test data file> "
-                   "<k> <number of random trees> <max leaves to check> [<max "
+                   "<max leaves to check> "
+                   "[-k=<k> -nTrees=<number of random trees> -nQueries=<max "
                    "number of queries>]"
                 << std::endl;
     }
@@ -32,12 +34,15 @@ int main(int argc, char *argv[]) {
   const std::string trainPath(argv[1]);
   const std::string labelPath(argv[2]);
   const std::string testPath(argv[3]);
-  const int k = std::stoi(argv[4]);
-  const int nTrees = std::stoi(argv[5]);
-  const int maxChecks = std::stoi(argv[6]);
+  const int maxChecks = std::stoi(argv[4]);
   int nQueries = -1;
-  if (argc >= 8) {
-    nQueries = std::stoi(argv[7]);
+  int k = 100;
+  int nTrees = 4;
+  {
+    ParseArguments args(argc, argv);
+    args("k", k);
+    args("nTrees", nTrees);
+    args("nQueries", nQueries);
   }
 
   knn::Timer timer;
@@ -57,7 +62,7 @@ int main(int argc, char *argv[]) {
     dataSizes[0] = train.size();
     dataSizes[1] = test.size();
   }
-  MPI_Barrier(MPI_COMM_WORLD);
+  knn::mpi::Barrier();
   if (mpiRank == 0) {
     std::cout << "Done in " << timer.Stop() << " seconds.\n" << std::flush;
     std::cout << "Broadcasting data... " << std::flush;
@@ -70,7 +75,7 @@ int main(int argc, char *argv[]) {
   knn::mpi::Broadcast(test.begin(), test.end(), 0);
   const int nTrain = train.size() / 128;
   const int nTest = test.size() / 128;
-  MPI_Barrier(MPI_COMM_WORLD);
+  knn::mpi::Barrier();
   if (mpiRank == 0) {
     std::cout << "Done in " << timer.Stop() << " seconds.\n" << std::flush;
     std::cout << "Building trees... " << std::flush;
@@ -81,7 +86,7 @@ int main(int argc, char *argv[]) {
     kdTrees = knn::KDTree<float, 128, true>::BuildRandomizedTrees(
         train.begin(), train.end(), nTrees);
   }
-  MPI_Barrier(MPI_COMM_WORLD);
+  knn::mpi::Barrier();
   if (mpiRank == 0) {
     std::cout << "Done in " << timer.Stop() << " seconds.\n" << std::flush;
     std::cout << "Broadcasting trees... " << std::flush;
@@ -89,7 +94,7 @@ int main(int argc, char *argv[]) {
   timer.Start();
   knn::KDTree<float, 128, true>::BroadcastTreesMPI(kdTrees, nTrees,
                                                    2 * nTrain - 1, 0);
-  MPI_Barrier(MPI_COMM_WORLD);
+  knn::mpi::Barrier();
   if (mpiRank == 0) {
     std::cout << "Done in " << timer.Stop() << " seconds.\n" << std::flush;
   }
@@ -109,7 +114,7 @@ int main(int argc, char *argv[]) {
   if (mpiRank == 0) {
     results.resize(k * nTest);
   }
-  MPI_Barrier(MPI_COMM_WORLD);
+  knn::mpi::Barrier();
   if (mpiRank != 0) {
     std::cout << "Performing search..." << std::flush;
     timer.Start();
@@ -120,6 +125,7 @@ int main(int argc, char *argv[]) {
     std::cout << " Done in " << timer.Stop()
               << " seconds.\nCopying back results..." << std::flush;
   }
+  knn::mpi::Barrier();
   // const auto mpiType = knn::mpi::CreateDataType<2>(
   //     {sizeof(float), sizeof(int)},
   //     {offsetof(PairType, first), offsetof(PairType, second)},
@@ -129,9 +135,10 @@ int main(int argc, char *argv[]) {
   timer.Start();
   std::for_each(outputSizes.begin(), outputSizes.end(),
                 [](int &x) { x *= sizeof(std::pair<float, int>); });
+  // TODO: dreadful hack
   MPI_Gatherv(results.data(), outputSizes[mpiRank], MPI_CHAR, results.data(),
               outputSizes.data(), begin.data(), MPI_CHAR, 0, MPI_COMM_WORLD);
-  MPI_Barrier(MPI_COMM_WORLD);
+  knn::mpi::Barrier();
   if (mpiRank != 0) {
     std::cout << "Done in " << timer.Stop() << " seconds.\n";
   }
