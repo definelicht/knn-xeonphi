@@ -5,14 +5,15 @@
 #include <string>
 
 ParseArguments::ParseArguments(int argc, char const *const *argv) : args_() {
-  static const std::regex pattern("-([a-zA-Z_0-9]+)=([^ ]*)");
+  static const std::regex pattern("-([a-zA-Z_0-9]+)=([^ ]*)",
+                                  std::regex_constants::basic);
   std::cmatch match;
   for (int i = 1; i < argc; ++i) {
     if (std::regex_match(argv[i], match, pattern) && match.size() == 3) {
       std::string argName(match[1]);
       std::transform(argName.begin(), argName.end(), argName.begin(),
                      ::tolower);
-      args_.emplace(argName, match[2]);
+      args_.insert(std::make_pair(argName, match[2]));
     }
   }
 }
