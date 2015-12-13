@@ -1,0 +1,59 @@
+Running Benchmarks for Intel MIC...
+
+Single-Precision - 512-bit AVX512 - Add/Sub:
+    Dependency Chains  = 8
+    Result     = 41472
+    FP Ops     = 122880000000000
+    seconds    = 109.205
+    GFlops     = 1125.22
+
+Single-Precision - 512-bit AVX512 - Multiply:
+    Dependency Chains = 12
+    Result     = 71424
+    FP Ops     = 184320000000000
+    seconds    = 163.355
+    GFlops     = 1128.34
+
+Single-Precision - 512-bit AVX512 - Multiply + Add:
+    Dependency Chains = 12
+    Result     = 71424
+    FP Ops     = 184320000000000
+    seconds    = 163.383
+    GFlops     = 1128.15
+
+Single-Precision - 512-bit AVX512 - Fused Multiply Add:
+    Dependency Chains = 12
+    Result     = 71424
+    FP Ops     = 368640000000000
+    seconds    = 163.381
+    GFlops     = 2256.32
+
+Double-Precision - 512-bit AVX512 - Add/Sub:
+    Dependency Chains  = 8
+    Result     = 20736
+    FP Ops     = 61440000000000
+    seconds    = 108.97
+    GFlops     = 563.823
+
+Double-Precision - 512-bit AVX512 - Multiply:
+    Dependency Chains = 12
+    Result     = 35712
+    FP Ops     = 92160000000000
+    seconds    = 163.356
+    GFlops     = 564.166
+
+Double-Precision - 512-bit AVX512 - Multiply + Add:
+    Dependency Chains = 12
+    Result     = 35712
+    FP Ops     = 92160000000000
+    seconds    = 163.362
+    GFlops     = 564.146
+
+Double-Precision - 512-bit AVX512 - Fused Multiply Add:
+    Dependency Chains = 12
+    Result     = 35712
+    FP Ops     = 184320000000000
+    seconds    = 163.345
+    GFlops     = 1128.41
+
+
