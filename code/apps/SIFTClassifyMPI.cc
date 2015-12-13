@@ -22,7 +22,8 @@ int main(int argc, char *argv[]) {
       std::cerr << "Usage: <training data file> <label file> <test data file> "
                    "<max leaves to check> "
                    "[-k=<k> -nTrees=<number of random trees> -nQueries=<max "
-                   "number of queries>]"
+                   "number of queries> -iterations=<number of iterations to "
+                   "run search>]"
                 << std::endl;
     }
     return 0;
@@ -38,11 +39,13 @@ int main(int argc, char *argv[]) {
   int nQueries = -1;
   int k = 100;
   int nTrees = 4;
+  int nIterations = 1;
   {
     ParseArguments args(argc, argv);
     args("k", k);
     args("nTrees", nTrees);
     args("nQueries", nQueries);
+    args("iterations", nIterations);
   }
 
   knn::Timer timer;
@@ -107,40 +110,46 @@ int main(int argc, char *argv[]) {
   for (int i = 1; i < mpiSize; ++i) {
     begin[i] = nTest * (i - 1) / (mpiSize - 1);
     end[i] = nTest * i / (mpiSize - 1);
-    outputSizes[i] = k * (end[i] - begin[i]);
+    // TODO: horrible hack
+    outputSizes[i] = sizeof(std::pair<float, int>) * k * (end[i] - begin[i]);
   }
   std::vector<std::pair<float, int>,
               tbb::scalable_allocator<std::pair<float, int>>> results;
   if (mpiRank == 0) {
     results.resize(k * nTest);
   }
-  knn::mpi::Barrier();
-  if (mpiRank != 0) {
-    std::cout << "Performing search..." << std::flush;
+  for (int i = 0; i < nIterations; ++i) {
+    knn::mpi::Barrier();
+    if (mpiRank != 0) {
+      if (nIterations > 1) {
+        std::cout << "Running iteration " << i + 1 << " / " << nIterations
+                  << "..." << std::flush;
+      } else {
+        std::cout << "Performing search..." << std::flush;
+      }
+      timer.Start();
+      results = knn::KnnApproximate<128, float, DataItr>(
+          kdTrees, train.cbegin(), test.cbegin() + 128 * begin[mpiRank],
+          test.cbegin() + 128 * end[mpiRank], k, maxChecks,
+          knn::SquaredEuclidianDistance<DataItr, 128>);
+      std::cout << " Done in " << timer.Stop()
+                << " seconds.\nCopying back results..." << std::flush;
+    }
+    knn::mpi::Barrier();
+    // const auto mpiType = knn::mpi::CreateDataType<2>(
+    //     {sizeof(float), sizeof(int)},
+    //     {offsetof(PairType, first), offsetof(PairType, second)},
+    //     {MPI_FLOAT, MPI_INT});
+    // MPI_Gatherv(results.data(), outputSizes[mpiRank], mpiType, results.data(),
+    //             outputSizes.data(), begin.data(), mpiType, 0, MPI_COMM_WORLD);
     timer.Start();
-    results = knn::KnnApproximate<128, float, DataItr>(
-        kdTrees, train.cbegin(), test.cbegin() + 128 * begin[mpiRank],
-        test.cbegin() + 128 * end[mpiRank], k, maxChecks,
-        knn::SquaredEuclidianDistance<DataItr, 128>);
-    std::cout << " Done in " << timer.Stop()
-              << " seconds.\nCopying back results..." << std::flush;
-  }
-  knn::mpi::Barrier();
-  // const auto mpiType = knn::mpi::CreateDataType<2>(
-  //     {sizeof(float), sizeof(int)},
-  //     {offsetof(PairType, first), offsetof(PairType, second)},
-  //     {MPI_FLOAT, MPI_INT});
-  // MPI_Gatherv(results.data(), outputSizes[mpiRank], mpiType, results.data(),
-  //             outputSizes.data(), begin.data(), mpiType, 0, MPI_COMM_WORLD);
-  timer.Start();
-  std::for_each(outputSizes.begin(), outputSizes.end(),
-                [](int &x) { x *= sizeof(std::pair<float, int>); });
-  // TODO: dreadful hack
-  MPI_Gatherv(results.data(), outputSizes[mpiRank], MPI_CHAR, results.data(),
-              outputSizes.data(), begin.data(), MPI_CHAR, 0, MPI_COMM_WORLD);
-  knn::mpi::Barrier();
-  if (mpiRank != 0) {
-    std::cout << "Done in " << timer.Stop() << " seconds.\n";
+    // TODO: dreadful hack
+    MPI_Gatherv(results.data(), outputSizes[mpiRank], MPI_CHAR, results.data(),
+                outputSizes.data(), begin.data(), MPI_CHAR, 0, MPI_COMM_WORLD);
+    knn::mpi::Barrier();
+    if (mpiRank != 0) {
+      std::cout << " Done in " << timer.Stop() << " seconds.\n";
+    }
   }
   if (mpiRank == 0) {
     int equal = 0;
