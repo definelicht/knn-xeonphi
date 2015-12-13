@@ -13,7 +13,8 @@ int main() {
   std::vector<size_t> indices(4);
   std::iota(indices.begin(), indices.end(), 0);
   auto meanAndVariance =
-      MeanAndVariance<float, 3>(arr, 0, indices.cbegin(), indices.cend());
+      MeanAndVariance<typename std::vector<float>::const_iterator, 3>(
+          arr.cbegin(), indices.cbegin(), indices.cend(), 0);
   assert(meanAndVariance.first[0] == 1);
   assert(meanAndVariance.first[1] == 10);
   assert(meanAndVariance.first[2] == 100);

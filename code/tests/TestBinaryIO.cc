@@ -14,7 +14,7 @@ int main() {
   for (int i = 0; i < 1000; ++i) {
     data.emplace_back(dist(rng));
   }
-  knn::WriteBinaryFile(path, data);
+  knn::WriteBinaryFile(path, data.cbegin(), data.cend());
   auto test = knn::LoadBinaryFile<double>(path);
   assert(test.size() == data.size());
   for (int i = 0, iEnd = data.size(); i < iEnd; ++i) {

@@ -8,12 +8,14 @@
 namespace knn {
 
 /// Thread UNSAFE bounded heap.
-template <typename T, bool EvictWhenFull> class BoundedHeap {
+template <typename IteratorType, bool EvictWhenFull> class BoundedHeap {
 
 public:
-  BoundedHeap(size_t maxSize);
+  using T = typename std::iterator_traits<IteratorType>::value_type;
 
-  BoundedHeap(size_t maxSize,
+  BoundedHeap(IteratorType begin, IteratorType end);
+
+  BoundedHeap(IteratorType begin, IteratorType end,
               std::function<bool(T const &, T const &b)> const &comp);
 
   size_t size() const;
@@ -38,8 +40,8 @@ public:
   std::vector<T> Destroy();
 
 private:
-  size_t maxSize_;
-  std::vector<T> content_{};
+  size_t size_, maxSize_;
+  IteratorType begin_;
   T lowest_{};
   std::function<bool(T const &, T const &b)> comp_;
 };
@@ -50,109 +52,111 @@ private:
 
 namespace {
 
-template <bool EvictWhenFull, typename T>
+template <bool EvictWhenFull, typename IteratorType>
 struct EvictImpl;
 
-template <typename T>
-struct EvictImpl<true, T> {
+template <typename IteratorType>
+struct EvictImpl<true, IteratorType> {
+  using T = typename std::iterator_traits<IteratorType>::value_type;
   EvictImpl() = delete;
-  EvictImpl(EvictImpl<true, T> const &other) = delete;
-  EvictImpl<true, T>& operator=(EvictImpl<true, T> const &other) = delete;
+  EvictImpl(EvictImpl<true, IteratorType> const &other) = delete;
+  EvictImpl<true, IteratorType> &
+  operator=(EvictImpl<true, IteratorType> const &other) = delete;
   static bool
-  PushWhenFull(std::function<bool(T const &, T const &)> const &comp,
-               T &back, std::vector<T> &content, T const &elem) {
-    if (elem < content[0]) {
+  PushWhenFull(std::function<bool(T const &, T const &)> const &comp, T &back,
+               const IteratorType begin, const int maxSize, T const &elem) {
+    if (elem < begin[0]) {
       if (elem < back) {
         back = elem;
       }
-      content[0] = elem;
-      std::make_heap(content.begin(), content.end(), comp);
+      begin[0] = elem;
+      std::make_heap(begin, begin + maxSize, comp);
       return true;
     }
     return false;
   }
 };
 
-template <typename T>
-struct EvictImpl<false, T> {
+template <typename IteratorType>
+struct EvictImpl<false, IteratorType> {
+  using T = typename std::iterator_traits<IteratorType>::value_type;
   EvictImpl() = delete;
-  EvictImpl(EvictImpl<false, T> const &other) = delete;
-  EvictImpl<false, T>& operator=(EvictImpl<false, T> const &other) = delete;
+  EvictImpl(EvictImpl<false, IteratorType> const &other) = delete;
+  EvictImpl<false, IteratorType> &
+  operator=(EvictImpl<false, IteratorType> const &other) = delete;
   static bool PushWhenFull(std::function<bool(T const &, T const &)> const &,
-                           T const &, std::vector<T> const &, T const &) {
+                           T const &, const IteratorType, const int,
+                           T const &) {
     return false;
   }
 };
 
 } // End anonymous namespace
 
-template <typename T, bool EvictWhenFull>
-BoundedHeap<T, EvictWhenFull>::BoundedHeap(const size_t maxSize)
-    : BoundedHeap(maxSize, std::less<T>()) {}
+template <typename IteratorType, bool EvictWhenFull>
+BoundedHeap<IteratorType, EvictWhenFull>::BoundedHeap(const IteratorType begin,
+                                                      const IteratorType end)
+    : BoundedHeap(begin, end, std::less<T>()) {}
 
-template <typename T, bool EvictWhenFull>
-BoundedHeap<T, EvictWhenFull>::BoundedHeap(
-    const size_t maxSize, std::function<bool(T const &, T const &)> const &comp)
-    : maxSize_(maxSize), comp_(comp) {
-  content_.reserve(maxSize);
+template <typename IteratorType, bool EvictWhenFull>
+BoundedHeap<IteratorType, EvictWhenFull>::BoundedHeap(
+    const IteratorType begin, const IteratorType end,
+    std::function<bool(T const &, T const &)> const &comp)
+    : size_(0), maxSize_(std::distance(begin, end)), begin_(begin),
+      comp_(comp) {}
+
+template <typename IteratorType, bool EvictWhenFull>
+size_t BoundedHeap<IteratorType, EvictWhenFull>::size() const {
+  return size_;
 }
 
-template <typename T, bool EvictWhenFull>
-size_t BoundedHeap<T, EvictWhenFull>::size() const {
-  return content_.size();
-}
-
-template <typename T, bool EvictWhenFull>
-size_t BoundedHeap<T, EvictWhenFull>::maxSize() const {
+template <typename IteratorType, bool EvictWhenFull>
+size_t BoundedHeap<IteratorType, EvictWhenFull>::maxSize() const {
   return maxSize_;
 }
 
-
-template <typename T, bool EvictWhenFull>
-bool BoundedHeap<T, EvictWhenFull>::isFull() const {
-  return content_.size() == maxSize_;
+template <typename IteratorType, bool EvictWhenFull>
+bool BoundedHeap<IteratorType, EvictWhenFull>::isFull() const {
+  return size_ == maxSize_;
 }
 
-template <typename T, bool EvictWhenFull>
-T BoundedHeap<T, EvictWhenFull>::Max() const {
-  assert(content_.size() > 0);
-  return content_[0];
+template <typename IteratorType, bool EvictWhenFull>
+typename std::iterator_traits<IteratorType>::value_type
+BoundedHeap<IteratorType, EvictWhenFull>::Max() const {
+  return *begin_;
 }
 
-template <typename T, bool EvictWhenFull>
-T BoundedHeap<T, EvictWhenFull>::Min() const {
-  assert(content_.size() > 0);
+template <typename IteratorType, bool EvictWhenFull>
+typename std::iterator_traits<IteratorType>::value_type
+BoundedHeap<IteratorType, EvictWhenFull>::Min() const {
   return lowest_;
 }
 
-template <typename T, bool EvictWhenFull>
-bool BoundedHeap<T, EvictWhenFull>::TryPopMax(T &elem) {
-  if (content_.size() > 0) {
-    std::pop_heap(content_.begin(), content_.end(), comp_);
-    elem = content_.back();
-    content_.pop_back();
+template <typename IteratorType, bool EvictWhenFull>
+bool BoundedHeap<IteratorType, EvictWhenFull>::TryPopMax(
+    typename std::iterator_traits<IteratorType>::value_type &elem) {
+  if (size_ > 0) {
+    std::pop_heap(begin_, begin_ + size_, comp_);
+    --size_;
+    elem = begin_[size_];
     return true;
   }
   return false;
 }
 
-template <typename T, bool EvictWhenFull>
-bool BoundedHeap<T, EvictWhenFull>::TryPush(T const &elem) {
-  if (content_.size() < maxSize_) {
-    if (content_.size() == 0 || (content_.size() > 0 && comp_(elem, lowest_))) {
+template <typename IteratorType, bool EvictWhenFull>
+bool BoundedHeap<IteratorType, EvictWhenFull>::TryPush(T const &elem) {
+  if (size_ < maxSize_) {
+    if (size_ == 0 || (size_ > 0 && comp_(elem, lowest_))) {
       lowest_ = elem;
     }
-    content_.emplace_back(elem);
-    std::push_heap(content_.begin(), content_.end(), comp_);
+    begin_[size_] = elem;
+    ++size_;
+    std::push_heap(begin_, begin_ + size_, comp_);
     return true;
   }
-  return EvictImpl<EvictWhenFull, T>::PushWhenFull(comp_, lowest_, content_,
-                                                   elem);
-}
-
-template <typename T, bool EvictWhenFull>
-std::vector<T> BoundedHeap<T, EvictWhenFull>::Destroy() {
-  return std::move(content_);
+  return EvictImpl<EvictWhenFull, IteratorType>::PushWhenFull(
+      comp_, lowest_, begin_, maxSize_, elem);
 }
 
 } // End namespace knn
