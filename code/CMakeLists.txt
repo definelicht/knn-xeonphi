@@ -94,6 +94,9 @@ if (KNN_USE_FLANN)
     TestFlann.cpp)
 endif()
 
+set(KNN_SRC ${KNN_SRC}
+    ParseArguments.cpp)
+
 set(KNN_APPS_SRC ${KNN_APPS_SRC}
     SIFTClassify.cc
     TestTreeBuildParallel.cpp)
