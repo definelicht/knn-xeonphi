@@ -6,7 +6,7 @@
 
 ParseArguments::ParseArguments(int argc, char const *const *argv) : args_() {
   static const std::regex pattern("-([a-zA-Z_0-9]+)=([^ ]*)",
-                                  std::regex_constants::basic);
+                                  std::regex_constants::extended);
   std::cmatch match;
   for (int i = 1; i < argc; ++i) {
     if (std::regex_match(argv[i], match, pattern) && match.size() == 3) {
