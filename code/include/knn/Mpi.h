@@ -63,6 +63,14 @@ inline int size(MPI_Comm const &comm) {
 
 inline int size() { return size(MPI_COMM_WORLD); }
 
+inline void Barrier(MPI_Comm const &comm) {
+  MPI_Barrier(comm);
+}
+
+inline void Barrier() {
+  Barrier(MPI_COMM_WORLD);
+}
+
 template <typename IteratorType, typename = CheckRandomAccess<IteratorType>>
 void Send(IteratorType begin, const IteratorType end, const int destination,
           const int tag = 0, MPI_Comm comm = MPI_COMM_WORLD) {
