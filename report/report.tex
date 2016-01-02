@@ -1,0 +1,74 @@
+% IEEE standard conference template; to be used with:
+%   spconf.sty  - LaTeX style file, and
+%   IEEEbib.bst - IEEE bibliography style file.
+% --------------------------------------------------------------------------
+
+\documentclass[letterpaper]{article}
+\usepackage{spconf,amsmath,amssymb,graphicx}
+
+% Example definitions.
+% --------------------
+% nice symbols for real and complex numbers
+\newcommand{\R}[0]{\mathbb{R}}
+\newcommand{\C}[0]{\mathbb{C}}
+
+% bold paragraph titles
+\newcommand{\mypar}[1]{{\bf #1.}}
+
+% Title.
+% ------
+\title{A Descriptive Title, not too general, not too long}
+%
+% Single address.
+% ---------------
+% \name{Markus P\"uschel\thanks{The author thanks Jelena Kovacevic. This paper
+% is a modified version of the template she used in her class.}} 
+% \address{Department of Computer Science\\ ETH Z\"urich\\Z\"urich, Switzerland}
+
+% For example:
+% ------------
+%\address{School\\
+%		 Department\\
+%		 Address}
+%
+% Two addresses (uncomment and modify for two-address case).
+% ----------------------------------------------------------
+\twoauthors%
+{P. Santhanam\sthanks{psanthan@student.ethz.ch}, J. de Fine 
+Licht\sthanks{definelj@student.ethz.ch}}%
+{ETH Z\"urich\\%
+Department of Computer Science\\%
+Universit\"atstrasse 6, 8006 Z\"urich}%
+{F. Wermelinger\sthanks{fabianw@mavt.ethz.ch}}%
+{ETH Z\"urich\\%
+% Computational Science and Engineering Laboratory\\%
+Chair of Computational Science\\%
+Clausiusstrasse 33, 8092 Z\"urich}%
+
+\begin{document}
+%\ninept
+\maketitle
+
+\begin{abstract}
+  Describe in concise words what you do, why you do it (not necessarily in this 
+  order), and the main result.  The abstract has to be self-contained and 
+  readable for a person in the general area. You should write the abstract 
+  last.
+\end{abstract}
+
+% Mainbody
+\input{./00_introduction/introduction.tex}
+\input{./01_background/background.tex}
+\input{./02_method/method.tex}
+\input{./03_results/results.tex}
+\input{./04_conclusion/conclusion.tex}
+\input{./05_comments/comments.tex}
+
+% References should be produced using the bibtex program from suitable
+% BiBTeX files (here: bibl_conf). The IEEEbib.bst bibliography
+% style file from IEEE produces unsorted bibliography list.
+% -------------------------------------------------------------------------
+\bibliographystyle{IEEEbib}
+\bibliography{bibl_conf}
+
+\end{document}
