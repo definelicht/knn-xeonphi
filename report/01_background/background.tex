@@ -1,23 +1,54 @@
-\section{Background: Whatever the Background is}
-  \label{sec:background}
+\section{$k$-Nearest Neighbor Search Algorithm}
+  \label{sec:_k_nearest_neighbor_search_algorithm}
 
-  Give a short, self-contained summary of necessary
-  background information. For example, assume you present an
-  implementation of sorting algorithms. You could organize into sorting
-  definition, algorithms considered, and asymptotic runtime statements. The goal of the
-  background section is to make the paper self-contained for an audience
-  as large as possible. As in every section
-  you start with a very brief overview of the section. Here it could be as follows: In this section 
-  we formally define the sorting problem we consider and introduce the algorithms we use
-  including a cost analysis.
+  In this section we formally define the $k$-nearest neighbor search problem 
+  and introduce the... add on here
 
-  \mypar{Sorting}
-  Precisely define sorting problem you consider.
+  \mypar{Nearest neighbor search} Consider a set of points $\mathcal{P} 
+  = \{p_1,p_2,\dots,p_n\}$ in a metric space $\mathbb{M}$ which defines some 
+  distance function $d\colon\mathbb{M}\times\mathbb{M}\to\mathbb{R}$.  If we 
+  are given a query point $q\in\mathcal{P}$, the nearest neighbor of $q$ must 
+  satisfy the condition
+  \begin{align}
+    \label{eq:NN}
+    \operatorname{NN}(q,\mathcal{P}) &= \operatorname{argmin}_{x\in\mathcal{P}} 
+    d(q,x)\in\mathcal{P}.
+  \end{align}
 
-  \mypar{Sorting algorithms}
-  Explain the algorithm you use including their costs.
+  Often we are not interested in only one nearest neighbor, but the $k$~nearest 
+  neighbors, for which we use the notation
+  \begin{align}
+    \label{eq:kNN}
+    \operatorname{kNN}(q,\mathcal{P},k) &= \mathcal{A},
+  \end{align}
+  where $\mathcal{A}\subseteq\mathcal{P}$ with cardinality 
+  $\vert\mathcal{A}\vert = k$.  The following constraint must further be 
+  satisfied
+  \begin{align}
+    \label{eq:constraint_kNN}
+    \{d(q,x)\mid d(q,x)\leq d(q,y)\forall x\in\mathcal{A}, 
+    y\in\mathcal{P}-\mathcal{A},q\in\mathcal{P}\}.
+  \end{align}
+  Since the cardinality of $\mathcal{A}$ is $k$, it follows that $n\geq k$ for 
+  the number of points in $\mathcal{P}$.
 
-  As an aside, don't talk about "the complexity of the algorithm.'' It's incorrect,
-  problems have a complexity, not algorithms.
+  % Give a short, self-contained summary of necessary
+  % background information. For example, assume you present an
+  % implementation of sorting algorithms. You could organize into sorting
+  % definition, algorithms considered, and asymptotic runtime statements. The goal of the
+  % background section is to make the paper self-contained for an audience
+  % as large as possible. As in every section
+  % you start with a very brief overview of the section. Here it could be as follows: In this section 
+  % we formally define the sorting problem we consider and introduce the algorithms we use
+  % including a cost analysis.
+
+  % \mypar{Sorting}
+  % Precisely define sorting problem you consider.
+
+  % \mypar{Sorting algorithms}
+  % Explain the algorithm you use including their costs.
+
+  % As an aside, don't talk about "the complexity of the algorithm.'' It's incorrect,
+  % problems have a complexity, not algorithms.
 
   % mainfile: ./../report.tex

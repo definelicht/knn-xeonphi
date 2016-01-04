@@ -16,10 +16,10 @@ all: $(patsubst %.tex,%.pdf,$(wildcard *.tex))
 	ps2pdf $<
 
 clean:
-	rm -rf *.bbl *.blg *.aux *.log *~ *.bak *.ps *.dvi *.log *.out *.tmp 
+	rm -rf *.bbl *.blg *.aux *.log *~ *.bak *.ps *.dvi *.log *.out *.tmp
 
 cleanall:
-	rm -rf *.bbl *.blg *.aux *.log *~ *.bak *.ps *.dvi *.log *.pdf svnver.tex *.out *.tmp 
+	rm -rf *.bbl *.blg *.aux *.log *~ *.bak *.ps *.dvi *.log *.pdf svnver.tex *.out *.tmp
 
 spell:
 	ispell -f ispell.words -t *.tex

@@ -1,29 +1,76 @@
 \section{Introduction}
   \label{sec:intro}
 
-  Do not start the introduction with the abstract or a slightly modified
-  version. It follows a possible structure of the introduction. 
-  Note that the structure can be modified, but the
-  content should be the same. Introduction and abstract should fill at most the first page, better less.
+  % Do not start the introduction with the abstract or a slightly modified
+  % version. It follows a possible structure of the introduction. 
+  % Note that the structure can be modified, but the
+  % content should be the same. Introduction and abstract should fill at most the first page, better less.
 
-  \mypar{Motivation} The first task is to motivate what you do.  You can
-  start general and zoom in one the specific problem you consider.  In
-  the process you should have explained to the reader: what you are doing,
-  why you are doing, why it is important (order is usually reversed).
+  \mypar{Motivation} In many applications, efficient search algorithms are of 
+  great importance due to their high computational cost.  A common search 
+  operation is to find a closest neighbor given some query point, which is 
+  referred to as \emph{nearest neighbor search}.  This operation can readily be 
+  extended to find the set of the $k$-nearest neighbors instead of just the 
+  closest nearest neighbor.  The search space is usually very large and each 
+  data point in such a set can be of high dimensionality.  For example, 
+  matching images using distinct local image features~\cite{lowe2004a} is 
+  a common task performed by web-search engines or in image recognition using 
+  large datasets of up to $80$~million small images~\cite{torralba2008a}, where 
+  each of the images is a high dimensional data point, depending on the number 
+  of pixels used to represent the image.
 
-  For example, if my result is the fastest sorting implementation ever, one
-  could roughly go as follows. First explain why sorting is important
-  (used everywhere with a few examples) and why performance matters (large datasets,
-  realtime). Then explain that fast implementations are very hard and
-  expensive to get (memory hierarchy, vector, parallel). 
+  In order to speed-up the basic linear traversal of the data during the 
+  search, accelerating data structures are employed.  For example, the kd-Tree 
+  is a simple such structure~\cite{bentley1975a,friedman1977a}.  However, exact 
+  nearest neighbor search using a kd-Tree is only efficient for low dimensional 
+  data~\cite{muja2009a}.  For high dimensional data approximate structures, 
+  such as a randomized kd-Tree~\cite{silpa2008a} or hierarchical $k$-means 
+  tree~\cite{muja2009a}, are used at the cost of the accuracy of the returned 
+  nearest neighbors.
 
-  Now you state what you do in this paper. In our example: 
-  presenting a sorting implementation that is
-  faster for some sizes as all the other ones.
+  In contrast to the naive linear search, an additional overhead is created by 
+  building the accelerating data structure before performing the search.  
+  Hence, the overall search time is composed of a build time for the data 
+  structure and the time to perform the search using the structure.  Naturally, 
+  the build time for a linear search vanishes.
 
-  \mypar{Related work} Next, you have to give a brief overview of
-  related work. For a report like this, anywhere between 2 and 8
-  references. Briefly explain what they do. In the end contrast to what
-  you do to make now precisely clear what your contribution is.
+  In this work, we focus on the fast parallel build of a set of randomized 
+  kd-Trees used to perform a parallel $k$-nearest neighbor search on high 
+  dimensional data.  For our parallel application, we utilize the Intel many 
+  integrated core (MIC) architecture offered by the Intel Knights Corner (KNC) 
+  co-processor family.
+
+  % \mypar{Motivation} The first task is to motivate what you do.  You can
+  % start general and zoom in one the specific problem you consider.  In
+  % the process you should have explained to the reader: what you are doing,
+  % why you are doing, why it is important (order is usually reversed).
+
+  % For example, if my result is the fastest sorting implementation ever, one
+  % could roughly go as follows. First explain why sorting is important
+  % (used everywhere with a few examples) and why performance matters (large datasets,
+  % realtime). Then explain that fast implementations are very hard and
+  % expensive to get (memory hierarchy, vector, parallel). 
+
+  % Now you state what you do in this paper. In our example: 
+  % presenting a sorting implementation that is
+  % faster for some sizes as all the other ones.
+
+  \mypar{Related work} Silpa-Anan and Hartley~\cite{silpa2008a} have proposed 
+  a kd-Tree algorithm based on creating multiple randomized kd-Trees, where 
+  each of the randomized trees splits the data based on a random choice of the 
+  $D$ dimensions with highest variance.  Muja and Lowe have developed a C++ 
+  library\footnote{\url{http://www.cs.ubc.ca/research/flann/}} for fast 
+  approximate nearest neighbor searches with automatic algorithm selection 
+  based on the data used for the search~\cite{muja2009a,muja2014a}.  The same 
+  library implements a parallel build of a kd-Tree for $3$D~data using GPU 
+  hardware.  Building trees for high dimensional data is not parallelized.  The 
+  work of Garcia~et~al.\@ employ GPUs to perform basic linear $k$-nearest 
+  neighbor searches by using optimized linear algebra libraries and sorting 
+  algorithms~\cite{garcia2008a,garcia2010a}.
+
+  % \mypar{Related work} Next, you have to give a brief overview of
+  % related work. For a report like this, anywhere between 2 and 8
+  % references. Briefly explain what they do. In the end contrast to what
+  % you do to make now precisely clear what your contribution is.
 
   % mainfile: ./../report.tex
