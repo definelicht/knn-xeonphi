@@ -20,11 +20,11 @@
   of pixels used to represent the image.
 
   In order to speed-up the basic linear traversal of the data during the 
-  search, accelerating data structures are employed.  For example, the kd-Tree 
+  search, accelerating data structures are employed.  For example, the k-d tree 
   is a simple such structure~\cite{bentley1975a,friedman1977a}.  However, exact 
-  nearest neighbor search using a kd-Tree is only efficient for low dimensional 
+  nearest neighbor search using a k-d tree is only efficient for low dimensional 
   data~\cite{muja2009a}.  For high dimensional data approximate structures, 
-  such as a randomized kd-Tree~\cite{silpa2008a} or hierarchical $k$-means 
+  such as a randomized k-d tree~\cite{silpa2008a} or hierarchical $k$-means 
   tree~\cite{muja2009a}, are used at the cost of the accuracy of the returned 
   nearest neighbors.
 
@@ -35,7 +35,7 @@
   the build time for a linear search vanishes.
 
   In this work, we focus on the fast parallel build of a set of randomized 
-  kd-Trees used to perform a parallel $k$-nearest neighbor search on high 
+  k-d trees used to perform a parallel $k$-nearest neighbor search on high 
   dimensional data.  For our parallel application, we utilize the Intel many 
   integrated core (MIC) architecture offered by the Intel Knights Corner (KNC) 
   co-processor family.
@@ -56,13 +56,13 @@
   % faster for some sizes as all the other ones.
 
   \mypar{Related work} Silpa-Anan and Hartley~\cite{silpa2008a} have proposed 
-  a kd-Tree algorithm based on creating multiple randomized kd-Trees, where 
+  a k-d tree algorithm based on creating multiple randomized k-d trees, where 
   each of the randomized trees splits the data based on a random choice of the 
   $D$ dimensions with highest variance.  Muja and Lowe have developed a C++ 
   library\footnote{\url{http://www.cs.ubc.ca/research/flann/}} for fast 
   approximate nearest neighbor searches with automatic algorithm selection 
   based on the data used for the search~\cite{muja2009a,muja2014a}.  The same 
-  library implements a parallel build of a kd-Tree for $3$D~data using GPU 
+  library implements a parallel build of a k-d tree for $3$D~data using GPU 
   hardware.  Building trees for high dimensional data is not parallelized.  The 
   work of Garcia~et~al.\@ employ GPUs to perform basic linear $k$-nearest 
   neighbor searches by using optimized linear algebra libraries and sorting 

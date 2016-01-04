@@ -2,7 +2,7 @@
   \label{sec:_k_nearest_neighbor_search_algorithm}
 
   In this section we formally define the $k$-nearest neighbor search problem 
-  and introduce the... add on here
+  and introduce the algorithm to build a randomized k-d tree.
 
   \mypar{Nearest neighbor search} Consider a set of points $\mathcal{P} 
   = \{p_1,p_2,\dots,p_n\}$ in a metric space $\mathbb{M}$ which defines some 
@@ -31,6 +31,22 @@
   \end{align}
   Since the cardinality of $\mathcal{A}$ is $k$, it follows that $n\geq k$ for 
   the number of points in $\mathcal{P}$.
+
+  \mypar{Randomized k-d~tree build} Building the tree is similar to a regular 
+  k-d tree~\cite{bentley1975a,friedman1977a} with the exception that the 
+  randomized k-d tree splits the data in a $d$-dimensional metric space along 
+  dimension $i_d$, which is chosen randomly out of $D$ possibilities, where $D$ 
+  is the number of the data dimensions with highest variance.  Each point 
+  $p\in\mathcal{P}$ for which the value of the $i_d$-th dimension is lower than 
+  the value of the same dimension of the reference point at the current node is 
+  placed in a reduced set of points $\mathcal{P}_l\subset\mathcal{P}$ or 
+  $\mathcal{P}_r\subset\mathcal{P}$ otherwise, where 
+  $\mathcal{P}_l\cup\mathcal{P}_r = \mathcal{P}$.
+  The procedure is then recursively applied to the two new branches using the 
+  corresponding set of points $\mathcal{P}=\mathcal{P}_l$ or 
+  $\mathcal{P}=\mathcal{P}_r$ with a new random choice for the split dimension 
+  $i_d$.  For the work presented here, we follow~\cite{muja2009a} and set 
+  $D=5$.
 
   % Give a short, self-contained summary of necessary
   % background information. For example, assume you present an
