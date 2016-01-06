@@ -21,7 +21,7 @@
 
   In order to speed-up the basic linear traversal of the data during the 
   search, accelerating data structures are employed.  For example, the k-d tree 
-  is a simple such structure~\cite{bentley1975a,friedman1977a}.  However, exact 
+  is a simple space partitioning data structure~\cite{bentley1975a,friedman1977a}, where at each level a particular axis among the $k$ dimensions is chosen to split the points in the space.  However, exact 
   nearest neighbor search using a k-d tree is only efficient for low dimensional 
   data~\cite{muja2009a}.  For high dimensional data approximate structures, 
   such as a randomized k-d tree~\cite{silpa2008a} or hierarchical $k$-means 
