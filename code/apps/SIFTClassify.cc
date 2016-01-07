@@ -193,15 +193,23 @@ int main(int argc, char const *argv[]) {
 #pragma omp parallel for reduction(+ : equalLinear, equalKdTree)
   for (int i = 0; i < nTest; ++i) {
     std::sort(groundTruth.begin() + i * k, groundTruth.begin() + (i + 1) * k);
-    std::sort(resultLinear.begin() + i * k, resultLinear.begin() + (i + 1) * k,
-              sortByIndex);
-    std::sort(resultKdTree.begin() + i * k, resultKdTree.begin() + (i + 1) * k,
-              sortByIndex);
-    std::sort(resultRandomized.begin() + i * k,
-              resultRandomized.begin() + (i + 1) * k, sortByIndex);
+    if (runAll || runLinear) {
+      std::sort(resultLinear.begin() + i * k,
+                resultLinear.begin() + (i + 1) * k, sortByIndex);
+    }
+    if (runAll || runKdTree) {
+      std::sort(resultKdTree.begin() + i * k,
+                resultKdTree.begin() + (i + 1) * k, sortByIndex);
+    }
+    if (runAll || runRandomized) {
+      std::sort(resultRandomized.begin() + i * k,
+                resultRandomized.begin() + (i + 1) * k, sortByIndex);
+    }
 #ifdef KNN_USE_FLANN
-    std::sort(resultFlann.begin() + i * k,
-              resultFlann.begin() + (i + 1) * k, sortByIndex);
+    if (runAll || runFlann) {
+      std::sort(resultFlann.begin() + i * k,
+                resultFlann.begin() + (i + 1) * k, sortByIndex);
+    }
 #endif
     auto iLinear = resultLinear.cbegin() + i * k;
     auto iLinearEnd = resultLinear.cbegin() + (i + 1) * k;
@@ -216,46 +224,54 @@ int main(int argc, char const *argv[]) {
     for (auto iGt = groundTruth.cbegin() + i * k,
               iGtEnd = groundTruth.cend() + (i + 1) * k;
          iGt < iGtEnd; ++iGt) {
-      while (iLinear < iLinearEnd) {
-        if (static_cast<int>(iLinear->second) == *iGt) {
+      if (runAll || runLinear) {
+        while (iLinear < iLinearEnd) {
+          if (static_cast<int>(iLinear->second) == *iGt) {
+            ++iLinear;
+            equalLinear += 1;
+            break;
+          } else if (static_cast<int>(iLinear->second) > *iGt) {
+            break;
+          }
           ++iLinear;
-          equalLinear += 1;
-          break;
-        } else if (static_cast<int>(iLinear->second) > *iGt) {
-          break;
         }
-        ++iLinear;
       }
-      while (iKd < iKdEnd) {
-        if (static_cast<int>(iKd->second) == *iGt) {
+      if (runAll || runKdTree) {
+        while (iKd < iKdEnd) {
+          if (static_cast<int>(iKd->second) == *iGt) {
+            ++iKd;
+            equalKdTree += 1;
+            break;
+          } else if (static_cast<int>(iKd->second) > *iGt) {
+            break;
+          }
           ++iKd;
-          equalKdTree += 1;
-          break;
-        } else if (static_cast<int>(iKd->second) > *iGt) {
-          break;
         }
-        ++iKd;
       }
-      while (iRand < iRandEnd) {
-        if (static_cast<int>(iRand->second) == *iGt) {
+      if (runAll || runRandomized) {
+        while (iRand < iRandEnd) {
+          if (static_cast<int>(iRand->second) == *iGt) {
+            ++iRand;
+            equalRand += 1;
+            break;
+          } else if (static_cast<int>(iRand->second) > *iGt) {
+            break;
+          }
           ++iRand;
-          equalRand += 1;
-          break;
-        } else if (static_cast<int>(iRand->second) > *iGt) {
-          break;
         }
-        ++iRand;
       }
 #ifdef KNN_USE_FLANN
-      while (iKdFlann < iKdFlannEnd) {
-        if (static_cast<int>(iKdFlann->second) == *iGt) {
+      if (runAll || runFlann) {
+        while (iKdFlann < iKdFlannEnd) {
+          if (static_cast<int>(iKdFlann->second) == *iGt) {
+            ++iKdFlann;
+            equalFlann += 1;
+            break;
+          } else if (static_cast<int>(iKdFlann->second) > *iGt) {
+            break;
+          }
           ++iKdFlann;
-          equalFlann += 1;
-          break;
-        } else if (static_cast<int>(iKdFlann->second) > *iGt) {
-          break;
         }
-        ++iKdFlann;
       }
 #endif
     }
