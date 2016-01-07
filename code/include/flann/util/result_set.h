@@ -177,9 +177,9 @@ public:
      * @param num_elements Number of elements to copy
      * @param sorted Indicates if results should be sorted
      */
-    void copy(size_t* indices, DistanceType* dists, size_t num_elements, bool sorted = true)
-    {
-    	size_t n = std::min(count_, num_elements);
+    void copy(size_t *indices, DistanceType *dists, size_t num_elements,
+              bool /* sorted = true */) {
+        size_t n = std::min(count_, num_elements);
     	for (size_t i=0; i<n; ++i) {
     		*indices++ = dist_index_[i].index_;
     		*dists++ = dist_index_[i].dist_;
@@ -276,7 +276,7 @@ public:
      * @param num_elements Number of elements to copy
      * @param sorted Indicates if results should be sorted
      */
-    void copy(size_t* indices, DistanceType* dists, size_t num_elements, bool sorted = true)
+    void copy(size_t* indices, DistanceType* dists, size_t num_elements, bool /*sorted = true*/)
     {
     	size_t n = std::min(count_, num_elements);
     	for (size_t i=0; i<n; ++i) {
@@ -737,9 +737,9 @@ public:
      * @param dist pointer to a C array of distances
      * @param n_neighbors the number of neighbors to copy
      */
-    void copy(size_t* indices, DistanceType* dist, int n_neighbors, bool sorted = true)
-    {
-    	if (n_neighbors<0) n_neighbors = dist_indices_.size();
+    void copy(size_t *indices, DistanceType *dist, int n_neighbors,
+              bool /* sorted = true */) {
+        if (n_neighbors<0) n_neighbors = dist_indices_.size();
     	int i = 0;
     	typedef typename std::set<DistIndex>::const_iterator Iterator;
     	for (Iterator dist_index = dist_indices_.begin(), dist_index_end =

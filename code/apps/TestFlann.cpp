@@ -53,10 +53,10 @@ int main(int argc, char** argv)
     }
 
     const int k = std::stoi(argv[4]);
-    int nQueries = -1;
-    if (argc >= 6) {
-        nQueries = std::stoi(argv[5]);
-    }
+    // int nQueries = -1;
+    // if (argc >= 6) {
+    //     nQueries = std::stoi(argv[5]);
+    // }
     const int nTrees = std::stoi(argv[1]);
 
     Timer timer;
@@ -83,7 +83,7 @@ int main(int argc, char** argv)
     double elapsedFlann = timer.Stop();
     std::cout << "Done in " << elapsedFlann << " seconds." << std::endl;
 
-    using myTreeType = KDTree<float, 128, true>;
+    // using myTreeType = KDTree<float, 128, true>;
     using DataItr = typename decltype(train)::const_iterator;
     std::cout << "Building randomized kd-tree parallel with "
     << std::thread::hardware_concurrency()

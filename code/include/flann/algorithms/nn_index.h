@@ -149,8 +149,8 @@ public:
 	 * @param points Matrix with points to be added
 	 * @param rebuild_threshold
 	 */
-    virtual void addPoints(const Matrix<ElementType>& points, float rebuild_threshold = 2)
-    {
+    virtual void addPoints(const Matrix<ElementType> &/* points */,
+                           float /* rebuild_threshold = 2 */) {
         throw FLANNException("Functionality not supported by this index");
     }
 
