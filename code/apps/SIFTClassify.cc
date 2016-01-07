@@ -11,6 +11,9 @@
 #ifdef KNN_USE_FLANN
 #include <flann/flann.h>
 #endif
+#ifdef KNN_USE_OMP
+#include <omp.h>
+#endif
 
 int main(int argc, char const *argv[]) {
 
@@ -67,6 +70,10 @@ int main(int argc, char const *argv[]) {
 
   std::cout << "Available hardware concurrency: "
             << std::thread::hardware_concurrency() << "\n";
+#ifdef KNN_USE_OMP
+  std::cout << "Available OMP threads (only used by FLANN): "
+            << omp_get_max_threads() << "\n";
+#endif
 
   std::cout << "Reading data... " << std::flush;
   timer.Start();
@@ -131,8 +138,12 @@ int main(int argc, char const *argv[]) {
     std::cout << " Done in " << elapsedFlannBuild << " seconds.\n";
     std::cout << "Nearest neighbor search using 5 randomized approximate FLANN "
                  "trees..." << std::flush;
-    index.knnSearch(flannTest, flannIndices, flannDists, k,
-                    flann::SearchParams(maxChecks));
+    flann::SearchParams params(maxChecks);
+#ifdef KNN_USE_OMP
+    params.cores = omp_get_max_threads();
+#endif
+    timer.Start();
+    index.knnSearch(flannTest, flannIndices, flannDists, k, params);
     elapsedFlannSearch = timer.Stop();
     for (int i = 0; i < nTest; ++i) {
       for (int j = 0; j < k; ++j) {
