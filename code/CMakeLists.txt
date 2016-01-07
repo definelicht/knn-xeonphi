@@ -84,15 +84,16 @@ if (CMAKE_BUILD_TYPE MATCHES Debug)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Weffc++")
 endif()
 
-message(STATUS "Compiling with flags: ${CMAKE_CXX_FLAGS}")
-
 if (KNN_USE_FLANN)
   set(KNN_SRC
     flann/ext/lz4.c
     flann/ext/lz4hc.c)
   set(KNN_APPS_SRC ${KNN_APPS_SRC}
     TestFlann.cpp)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DKNN_USE_FLANN")
 endif()
+
+message(STATUS "Compiling with flags: ${CMAKE_CXX_FLAGS}")
 
 set(KNN_SRC ${KNN_SRC}
     ParseArguments.cpp)
