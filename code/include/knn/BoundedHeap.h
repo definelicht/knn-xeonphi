@@ -4,6 +4,7 @@
 #include <cassert>
 #include <functional>
 #include <vector>
+#include "knn/Common.h"
 
 namespace knn {
 
@@ -30,8 +31,10 @@ public:
   /// If called on an empty heap the returned value is undefined.
   T Min() const;
 
+  KNN_FORCE_INLINE
   bool TryPopMax(T &elem);
 
+  KNN_FORCE_INLINE
   bool TryPush(T const &elem);
 
   /// Returns the data content of the heap, invalidating the instance of the
