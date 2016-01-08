@@ -2,6 +2,8 @@
 
 #include <algorithm>
 #include <array>
+#include <cassert>
+#include <cstdlib>
 #include <iterator>
 #include <type_traits>
 #include <stdint.h>
@@ -11,6 +13,14 @@
 #endif
 
 namespace knn {
+
+#define KNN_FORCE_INLINE __attribute__((always_inline)) inline
+
+#ifdef NDEBUG
+#define KNN_ASSERT(condition) if (!(condition)) exit(1);
+#else
+#define KNN_ASSERT(condition) assert(condition);
+#endif
 
 template <typename IteratorType>
 using CheckRandomAccess = typename std::enable_if<std::is_base_of<
@@ -66,6 +76,7 @@ MeanAndVariance(const DataIterator data, IndexIterator begin,
 }
 
 template <typename DataIterator, int Dim>
+KNN_FORCE_INLINE
 typename std::iterator_traits<DataIterator>::value_type
 SquaredEuclidianDistance(const DataIterator a, const DataIterator b) {
   static_assert(HasRandomAccess<DataIterator>(),
