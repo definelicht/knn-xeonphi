@@ -34,7 +34,7 @@ int main() {
   KNN_ASSERT(heapEvict.TryPush(std::make_pair(3, 3)));
   KNN_ASSERT(heapEvict.TryPush(std::make_pair(4, 4)));
   evictAssume(4, 2);
-  KNN_ASSERT(heapEvict.TryPush(std::make_pair(5, 5)));
+  KNN_ASSERT(!heapEvict.TryPush(std::make_pair(5, 5)));
   evictAssume(4, 2);
   KNN_ASSERT(heapEvict.TryPush(std::make_pair(1, 1)));
   evictAssume(3, 1);
