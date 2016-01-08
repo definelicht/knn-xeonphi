@@ -13,7 +13,7 @@ LoadBinaryFile(std::string const &path) {
   std::ifstream file(path, std::ios::binary);
   file.seekg(0, std::ios::end);
   auto fileSize = file.tellg();
-  file.seekg(1, std::ios::beg);
+  file.seekg(0, std::ios::beg);
   std::vector<T, tbb::cache_aligned_allocator<T>> output(fileSize / sizeof(T));
   file.read(reinterpret_cast<char *>(output.data()), fileSize);
   return output;
