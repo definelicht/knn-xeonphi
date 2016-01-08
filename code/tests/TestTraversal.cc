@@ -1,7 +1,7 @@
 #include <algorithm>
-#include <cassert>
 #include <iostream>
 #include <vector>
+#include "knn/Common.h"
 #include "knn/KDTree.h"
 #include "knn/Random.h"
 
@@ -17,7 +17,7 @@ void Traverse(typename TreeType::NodeItr itr, std::vector<size_t> &indices) {
   }
   auto left = itr.Left();
   auto right = itr.Right();
-  assert(left.inBounds() == right.inBounds());
+  KNN_ASSERT(left.inBounds() == right.inBounds());
   if (!left.inBounds() && !right.inBounds()) {
     indices.push_back(itr.index());
     return;
@@ -33,10 +33,10 @@ int main() {
   std::vector<size_t> indices;
   indices.reserve(n);
   Traverse(kdTree.Root(), indices);
-  assert(indices.size() == n);
+  KNN_ASSERT(indices.size() == n);
   std::sort(indices.begin(), indices.end());
   for (size_t i = 0; i < n; ++i) {
-    assert(indices[i] == i);
+    KNN_ASSERT(indices[i] == i);
   }
   return 0;
 }

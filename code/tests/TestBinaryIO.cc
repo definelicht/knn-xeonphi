@@ -1,4 +1,5 @@
 #include "knn/BinaryIO.h"
+#include "knn/Common.h"
 #include <cassert>
 #include <fstream>
 #include <iostream>
@@ -16,9 +17,12 @@ int main() {
   }
   knn::WriteBinaryFile(path, data.cbegin(), data.cend());
   auto test = knn::LoadBinaryFile<double>(path);
-  assert(test.size() == data.size());
+  KNN_ASSERT(test.size() == data.size());
   for (int i = 0, iEnd = data.size(); i < iEnd; ++i) {
-    assert(test[i] == data[i]);
+    // if (test[i] != data[i]) {
+    //   std::cerr << test[i] << " vs " << data[i] << "\n";
+    // }
+    KNN_ASSERT(test[i] == data[i]);
   }
   return 0;
 }

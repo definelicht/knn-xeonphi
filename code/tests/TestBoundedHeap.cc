@@ -1,6 +1,6 @@
-#include <cassert>
 #include <utility>
 #include "knn/BoundedHeap.h"
+#include "knn/Common.h"
 
 using namespace knn;
 
@@ -15,48 +15,48 @@ int main() {
       heapNoEvictVec.begin(), heapNoEvictVec.end(), comp);
 
   auto evictAssume = [&](float high, float low) {
-    assert(heapEvict.Max().first == high);
-    assert(heapEvict.Min().first == low);
+    KNN_ASSERT(heapEvict.Max().first == high);
+    KNN_ASSERT(heapEvict.Min().first == low);
   };
   auto noEvictAssume = [&](float high, float low) {
-    assert(heapNoEvict.Max().first == high);
-    assert(heapNoEvict.Min().first == low);
+    KNN_ASSERT(heapNoEvict.Max().first == high);
+    KNN_ASSERT(heapNoEvict.Min().first == low);
   };
 
   std::pair<float, int> pop;
-  assert(heapEvict.TryPush(std::make_pair(3, 3)));
+  KNN_ASSERT(heapEvict.TryPush(std::make_pair(3, 3)));
   evictAssume(3, 3);
-  assert(heapEvict.TryPush(std::make_pair(2, 2)));
+  KNN_ASSERT(heapEvict.TryPush(std::make_pair(2, 2)));
   evictAssume(3, 2);
-  assert(heapEvict.TryPopMax(pop));
-  assert(pop.second == 3);
+  KNN_ASSERT(heapEvict.TryPopMax(pop));
+  KNN_ASSERT(pop.second == 3);
   evictAssume(2, 2);
-  assert(heapEvict.TryPush(std::make_pair(3, 3)));
-  assert(heapEvict.TryPush(std::make_pair(4, 4)));
+  KNN_ASSERT(heapEvict.TryPush(std::make_pair(3, 3)));
+  KNN_ASSERT(heapEvict.TryPush(std::make_pair(4, 4)));
   evictAssume(4, 2);
-  assert(heapEvict.TryPush(std::make_pair(5, 5)));
+  KNN_ASSERT(heapEvict.TryPush(std::make_pair(5, 5)));
   evictAssume(4, 2);
-  assert(heapEvict.TryPush(std::make_pair(1, 1)));
+  KNN_ASSERT(heapEvict.TryPush(std::make_pair(1, 1)));
   evictAssume(3, 1);
   std::sort_heap(heapEvictVec.begin(), heapEvictVec.end(), comp);
-  assert(heapEvictVec[0].second == 1);
-  assert(heapEvictVec[1].second == 2);
-  assert(heapEvictVec[2].second == 3);
+  KNN_ASSERT(heapEvictVec[0].second == 1);
+  KNN_ASSERT(heapEvictVec[1].second == 2);
+  KNN_ASSERT(heapEvictVec[2].second == 3);
 
-  assert(heapNoEvict.TryPush(std::make_pair(3, 3)));
+  KNN_ASSERT(heapNoEvict.TryPush(std::make_pair(3, 3)));
   noEvictAssume(3, 3);
-  assert(heapNoEvict.TryPush(std::make_pair(2, 2)));
+  KNN_ASSERT(heapNoEvict.TryPush(std::make_pair(2, 2)));
   noEvictAssume(3, 2);
-  assert(heapNoEvict.TryPush(std::make_pair(4, 4)));
+  KNN_ASSERT(heapNoEvict.TryPush(std::make_pair(4, 4)));
   noEvictAssume(4, 2);
-  assert(!heapNoEvict.TryPush(std::make_pair(5, 5)));
+  KNN_ASSERT(!heapNoEvict.TryPush(std::make_pair(5, 5)));
   noEvictAssume(4, 2);
-  assert(!heapNoEvict.TryPush(std::make_pair(1, 1)));
+  KNN_ASSERT(!heapNoEvict.TryPush(std::make_pair(1, 1)));
   noEvictAssume(4, 2);
   std::sort_heap(heapNoEvictVec.begin(), heapNoEvictVec.end(), comp);
-  assert(heapNoEvictVec[0].second == 2);
-  assert(heapNoEvictVec[1].second == 3);
-  assert(heapNoEvictVec[2].second == 4);
+  KNN_ASSERT(heapNoEvictVec[0].second == 2);
+  KNN_ASSERT(heapNoEvictVec[1].second == 3);
+  KNN_ASSERT(heapNoEvictVec[2].second == 4);
 
   return 0;
 }

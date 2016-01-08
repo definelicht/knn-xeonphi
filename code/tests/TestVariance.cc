@@ -1,5 +1,4 @@
 #include "knn/Common.h"
-#include <cassert>
 #include <iostream>
 #include <numeric>
 
@@ -15,12 +14,12 @@ int main() {
   auto meanAndVariance =
       MeanAndVariance<typename std::vector<float>::const_iterator, 3>(
           arr.cbegin(), indices.cbegin(), indices.cend(), 0);
-  assert(meanAndVariance.first[0] == 1);
-  assert(meanAndVariance.first[1] == 10);
-  assert(meanAndVariance.first[2] == 100);
+  KNN_ASSERT(meanAndVariance.first[0] == 1);
+  KNN_ASSERT(meanAndVariance.first[1] == 10);
+  KNN_ASSERT(meanAndVariance.first[2] == 100);
   // Result is not divided by number of elements
-  assert(meanAndVariance.second[0] == 0.125*4); 
-  assert(meanAndVariance.second[1] == 12.5*4);
-  assert(meanAndVariance.second[2] == 1250*4);
+  KNN_ASSERT(meanAndVariance.second[0] == 0.125*4); 
+  KNN_ASSERT(meanAndVariance.second[1] == 12.5*4);
+  KNN_ASSERT(meanAndVariance.second[2] == 1250*4);
   return 0;
 }
