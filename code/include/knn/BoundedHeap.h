@@ -66,13 +66,13 @@ struct EvictImpl<true, IteratorType> {
   EvictImpl<true, IteratorType> &
   operator=(EvictImpl<true, IteratorType> const &other) = delete;
   static bool
-  PushWhenFull(std::function<bool(T const &, T const &)> const &comp, T &back,
+  PushWhenFull(std::function<bool(T const &, T const &)> const &comp, T &lowest,
                const IteratorType begin, const int maxSize, T const &elem) {
-    if (elem < begin[0]) {
-      if (elem < back) {
-        back = elem;
-      }
+    if (comp(elem, begin[0])) {
       begin[0] = elem;
+      if (comp(elem, lowest)) {
+        lowest = elem;
+      }
       std::make_heap(begin, begin + maxSize, comp);
       return true;
     }
