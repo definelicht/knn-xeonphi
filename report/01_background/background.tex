@@ -47,7 +47,9 @@
   $\mathcal{P}=\mathcal{P}_r$ with a new random choice for the split dimension 
   $i_d$.  For the work presented here, we follow~\cite{muja2009a} and set 
   $D=5$.
-
+  
+  \mypar{Randomized k-d~tree search}
+Multiple randomized k-d trees are searched for  $k$ nearest neighbors. For each query $q_i$ two bounded heaps $H_{1i}$ and $H_{2i}$ are maintained across the randomized k-d forest. $H_{1i}$ contains the $k$ closest neighbors and $H_{2i}$ maintains the most promising branches not yet searched across all trees. After examining a given maximum number of leaves over all the trees the search is stopped resulting in an approximation of the obtained $k$ nearest neighbors. The search can be parallelized trivially. 
   % Give a short, self-contained summary of necessary
   % background information. For example, assume you present an
   % implementation of sorting algorithms. You could organize into sorting
