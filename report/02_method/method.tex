@@ -1,12 +1,25 @@
-\section{Your Proposed Method}
-  \label{sec:yourmethod}
+\section{Parallelization Schemes}
+  \label{sec:parallelisation_schemes}
 
-  Now comes the ``beef'' of the report, where you explain what you
-  did. Again, organize it in paragraphs with titles. As in every section
-  you start with a very brief overview of the section.
+This section describes the approaches to parallelize build and search process of the randomized k-d trees. 
 
-  In this section, structure is very important so one can follow the technical content.
+\mypar{Build Parallization}
+Let $N$ denote the number of Randomized k-d trees to be built. The first layer of parallelism is building the $N$ trees in parallel.
 
-  Mention and cite any external resources that you used including libraries or other code.
+Intel's Threading Building Blocks (TBB) \footnote{\url{https://www.threadingbuildingblocks.org/}} is a widely used C++ template library for task parallelism. TBB's scheduler uses work stealing approach to schedule the tasks that are added into the task group $(tbb::task\_group)$. As discussed, the randomized k-d tree is built by recursively splitting at each node the set of points $\mathcal{P}$ into $\mathcal{P}_{l}$ and $\mathcal{P}_{r}$. Let $C$ denote the number of available hardware threads. $T_i$ denote the task of splitting the set of points $\mathcal{P}_{i}$ at the level $i$ into $\mathcal{P}_{l,i}$ and $\mathcal{P}_{r,i}$. The Task group $G$ is obtained as
+\begin{align}
+G=\lbrace T_i \mid i \in [0,i_{max}] \rbrace
+\end{align} 
+\label{eq:tbb_task_group} 
+
+where $i_{max}$ is the level at which the width of the tree equals $C/N$. The equation $\ref{eq:tbb_task_group}$  constrains the spanning of tasks int the task group from the root till the width of the tree equals the number of available hardware threads. 
+
+ % Now comes the ``beef'' of the report, where you explain what you
+%   did. Again, organize it in paragraphs with titles. As in every section
+ %  you start with a very brief overview of the section.
+
+ %  In this section, structure is very important so one can follow the technical content.
+
+%   Mention and cite any external resources that you used including libraries or other code.
 
   % mainfile: ./../report.tex
