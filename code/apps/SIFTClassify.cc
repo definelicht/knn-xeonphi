@@ -72,7 +72,8 @@ int main(int argc, char const *argv[]) {
   auto writeBenchmark = [&output](std::string const &method, const int nThreads,
                                   double elapsed) {
     if (output.is_open()) {
-      output << method << "," << nThreads << "," << elapsed << "\n";
+      // output << method << "," << nThreads << "," << elapsed << "\n";
+      output << method << "," << elapsed << "\n";
     }
   };
 
