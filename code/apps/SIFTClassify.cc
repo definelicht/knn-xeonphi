@@ -8,10 +8,8 @@
 #include <istream>
 #include <string>
 #include <unordered_map>
-#ifdef KNN_USE_FLANN
+#if defined(KNN_USE_FLANN) && defined(KNN_USE_OMP)
 #include <flann/flann.h>
-#endif
-#ifdef KNN_USE_OMP
 #include <omp.h>
 #endif
 
@@ -44,7 +42,7 @@ int main(int argc, char const *argv[]) {
   bool runAll = methods.find("all") != std::string::npos;
   bool runLinear = methods.find("linear") != std::string::npos;
   bool runKdTree = methods.find("kdtree") != std::string::npos;
-#ifdef KNN_USE_FLANN
+#if defined(KNN_USE_FLANN) && defined(KNN_USE_OMP)
   bool runFlann = methods.find("flann") != std::string::npos;
 #endif
   bool runRandomized = methods.find("randomized") != std::string::npos;
@@ -63,18 +61,16 @@ int main(int argc, char const *argv[]) {
 
   knn::Timer timer;
 
-  int nThreads = std::thread::hardware_concurrency();
 
   std::cout << "Available hardware concurrency: "
             << std::thread::hardware_concurrency() << "\n";
 #ifdef KNN_USE_OMP
-  nThreads = omp_get_max_threads();
   std::cout << "Available OMP threads (only used by FLANN): "
             << omp_get_max_threads() << "\n";
 #endif
 
-  auto writeBenchmark = [&output, &nThreads](std::string const &method,
-                                             double elapsed) {
+  auto writeBenchmark = [&output](std::string const &method, const int nThreads,
+                                  double elapsed) {
     if (output.is_open()) {
       output << method << "," << nThreads << "," << elapsed << "\n";
     }
@@ -104,7 +100,8 @@ int main(int argc, char const *argv[]) {
         knn::SquaredEuclidianDistance<DataItr, 128>);
     elapsedLinear = timer.Stop();
     std::cout << " Done in " << elapsedLinear << " seconds.\n";
-    writeBenchmark("linear", elapsedLinear);
+    writeBenchmark("linearSearch", std::thread::hardware_concurrency(),
+                   elapsedLinear);
   }
   
   std::vector<std::pair<float, int>,
@@ -115,6 +112,7 @@ int main(int argc, char const *argv[]) {
     knn::KDTree<float, 128, false> kdTree(train.cbegin(), train.cend());
     elapsed = timer.Stop();
     std::cout << " Done in " << elapsed << " seconds.\n";
+    writeBenchmark("kdtreeBuild", std::thread::hardware_concurrency(), elapsed);
     std::cout << "Nearest neighbor search using one exact tree...";
     timer.Start();
     resultKdTree = knn::KnnExact<128, float, DataItr>(
@@ -122,10 +120,10 @@ int main(int argc, char const *argv[]) {
         knn::SquaredEuclidianDistance<DataItr, 128>);
     elapsed = timer.Stop();
     reportBenchmark(elapsed);
-    writeBenchmark("kdtree", elapsed);
+    writeBenchmark("kdtreeSearch", std::thread::hardware_concurrency(), elapsed);
   }
 
-#ifdef KNN_USE_FLANN
+#if defined(KNN_USE_FLANN) && defined(KNN_USE_OMP)
   std::vector<std::pair<float, int>,
               tbb::scalable_allocator<std::pair<float, int>>> resultFlann;
   double elapsedFlannBuild, elapsedFlannSearch;
@@ -141,12 +139,11 @@ int main(int argc, char const *argv[]) {
     index.buildIndex();
     elapsedFlannBuild = timer.Stop();
     std::cout << " Done in " << elapsedFlannBuild << " seconds.\n";
+    writeBenchmark("flannBuild", omp_get_max_threads(), elapsedFlannBuild);
     std::cout << "Nearest neighbor search using 5 randomized approximate FLANN "
                  "trees..." << std::flush;
     flann::SearchParams params(maxChecks);
-#ifdef KNN_USE_OMP
     params.cores = omp_get_max_threads();
-#endif
     timer.Start();
     index.knnSearch(flannTest, flannIndices, flannDists, k, params);
     elapsedFlannSearch = timer.Stop();
@@ -157,7 +154,7 @@ int main(int argc, char const *argv[]) {
       }
     }
     reportBenchmark(elapsedFlannSearch);
-    writeBenchmark("kdtree", elapsedFlannSearch);
+    writeBenchmark("flannSearch", omp_get_max_threads(), elapsedFlannSearch);
   }
 #endif
 
@@ -171,6 +168,7 @@ int main(int argc, char const *argv[]) {
         knn::KDTree<float, 128, true>::Pivot::median, 100);
     elapsed = timer.Stop();
     std::cout << "Done in " << elapsed << " seconds.\n";
+    writeBenchmark("randomizedBuild", std::thread::hardware_concurrency(), elapsed);
 #ifdef KNN_USE_FLANN
     if (runAll || runFlann) {
       std::cout << "Build speedup over FLANN: " << elapsedFlannBuild / elapsed
@@ -185,8 +183,9 @@ int main(int argc, char const *argv[]) {
         knn::SquaredEuclidianDistance<DataItr, 128>);
     elapsed = timer.Stop();
     reportBenchmark(elapsed);
-    writeBenchmark("randomized", elapsed);
-#ifdef KNN_USE_FLANN
+    writeBenchmark("randomizedSearch", std::thread::hardware_concurrency(),
+                   elapsed);
+#if defined(KNN_USE_FLANN) && defined(KNN_USE_OMP)
     if (runAll || runFlann) {
       std::cout << "Search speedup over FLANN: " << elapsedFlannSearch / elapsed
                 << ".\n";
@@ -197,7 +196,7 @@ int main(int argc, char const *argv[]) {
   float equalLinear = 0;
   float equalKdTree = 0;
   float equalRand = 0;
-#ifdef KNN_USE_FLANN
+#if defined(KNN_USE_FLANN) && defined(KNN_USE_OMP)
   float equalFlann = 0;
 #endif
 
@@ -221,7 +220,7 @@ int main(int argc, char const *argv[]) {
       std::sort(resultRandomized.begin() + i * k,
                 resultRandomized.begin() + (i + 1) * k, sortByIndex);
     }
-#ifdef KNN_USE_FLANN
+#if defined(KNN_USE_FLANN) && defined(KNN_USE_OMP)
     if (runAll || runFlann) {
       std::sort(resultFlann.begin() + i * k,
                 resultFlann.begin() + (i + 1) * k, sortByIndex);
@@ -233,7 +232,7 @@ int main(int argc, char const *argv[]) {
     auto iKdEnd = resultKdTree.cbegin() + (i + 1) * k;
     auto iRand = resultRandomized.cbegin() + i * k;
     auto iRandEnd = resultRandomized.cbegin() + (i + 1) * k;
-#ifdef KNN_USE_FLANN
+#if defined(KNN_USE_FLANN) && defined(KNN_USE_OMP)
     auto iKdFlann = resultFlann.cbegin() + i * k;
     auto iKdFlannEnd = resultFlann.cbegin() + (i + 1) * k;
 #endif
@@ -276,7 +275,7 @@ int main(int argc, char const *argv[]) {
           ++iRand;
         }
       }
-#ifdef KNN_USE_FLANN
+#if defined(KNN_USE_FLANN) && defined(KNN_USE_OMP)
       if (runAll || runFlann) {
         while (iKdFlann < iKdFlannEnd) {
           if (static_cast<int>(iKdFlann->second) == *iGt) {
@@ -312,7 +311,7 @@ int main(int argc, char const *argv[]) {
               << static_cast<float>(equalRand) / k
               << ") classified correctly on average.\n";
   }
-#ifdef KNN_USE_FLANN
+#if defined(KNN_USE_FLANN) && defined(KNN_USE_OMP)
   equalFlann /= nTest;
   if (runAll || runFlann) {
     std::cout << "FLANN kd-tree: " << equalFlann << " / " << k << " ("
