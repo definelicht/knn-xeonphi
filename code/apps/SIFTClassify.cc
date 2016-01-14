@@ -60,20 +60,25 @@ int main(int argc, char const *argv[]) {
     }
     std::cout << ".\n";
   };
-  auto writeBenchmark = [&output](std::string const &method, double elapsed) {
-    if (output.is_open()) {
-      output << method << "," << elapsed << "\n";
-    }
-  };
 
   knn::Timer timer;
+
+  int nThreads = std::thread::hardware_concurrency();
 
   std::cout << "Available hardware concurrency: "
             << std::thread::hardware_concurrency() << "\n";
 #ifdef KNN_USE_OMP
+  nThreads = omp_get_max_threads();
   std::cout << "Available OMP threads (only used by FLANN): "
             << omp_get_max_threads() << "\n";
 #endif
+
+  auto writeBenchmark = [&output, &nThreads](std::string const &method,
+                                             double elapsed) {
+    if (output.is_open()) {
+      output << method << "," << nThreads << "," << elapsed << "\n";
+    }
+  };
 
   std::cout << "Reading data... " << std::flush;
   timer.Start();
