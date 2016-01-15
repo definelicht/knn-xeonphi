@@ -4,6 +4,10 @@
 *.swp
 *.pyc
 *.pdf
+*.aux
+*.bbl
+*.blg
+*.out
 build/
 myBuild/
 data/
