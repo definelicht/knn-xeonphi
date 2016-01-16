@@ -49,6 +49,7 @@ spawning scheme. This work contains no demonstration of the suggested parallel b
 \mypar{Search performance} Since no novel work is done to improve over the search algorithm implemented for randomized k-d trees in the FLANN library, the performance of the implementation presented here is only expected to match that of FLANN. The contribution of this work is to evaluate the performance of the search algorithm on the Xeon Phi platform, whose architecture is expected to be a good match to the randomized k-d tree search due to several factors: firstly the highly parallel nature of the search offers full
 hardware utilization when queried with a sufficiently high numbers of points, while not being fully vectorizable due to the heterogeneousness of the tree structure. Secondly, the algorithm offers benefits of sharing memory between caches without causing performance hits due to writes. Thirdly, computing the Euclidian distance between high dimensional input offers an opportunity to take advantage of the 512-bit wide SIMD units on the Knight's Corner cores, treating up to 16
 single precision floating point numbers in parallel. 
+Because of the issues with the build algorithm compiled with ICC as described above, search on the Xeon Phi is done by building the randomized trees on the host processor, then transferring this using explicit MPI send and receive calls. This allows the host and coprocessor binaries to be built and linked separately with different compilers, relying on Intel's MPI library for interfacing.
 
 
   % mainfile: ./../report.tex
