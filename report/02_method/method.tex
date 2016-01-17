@@ -1,29 +1,32 @@
 \section{Parallelization Schemes}
-  \label{sec:parallelisation_schemes}
+  % \label{sec:parallelisation_schemes}
+  \label{sec:method}
 
 This section describes the approaches to parallelize build and search process
  of the randomized k-d trees. 
 
 \mypar{Build Parallization}
-Let $N$ denote the number of Randomized k-d trees to be built. The first
- layer of parallelism is building the $N$ trees in parallel.
+If $N$ is the number of randomized k-d trees to be built, the trivial first
+ layer of parallelism is building these $N$ trees in parallel.
 
-Intel's Threading Building Blocks (TBB) \footnote{\url{https://www.threadingbuildingblocks.org/}} is a widely used C++ template library for
- task parallelism. TBB's scheduler uses work stealing approach to schedule the
-  tasks that are added into the task group $(tbb::task\_group)$. As
-   discussed, the randomized k-d tree is built by recursively splitting at each
-    node the set of points $\mathcal{P}$ into $\mathcal{P}_{l}$ and $\mathcal{P}_{r}$. Let $C$ denote the number of available hardware 
-    threads. $T_i$ denote the task of splitting the set of points $\mathcal{P}_{i}$ at the level $i$ into $\mathcal{P}_{l,i}$ and $\mathcal{P}_{r,i}$. The
-     Task group $G$ is obtained as
-\begin{align}
-G=\lbrace T_i \mid i \in [0,i_{max}] \rbrace
-\end{align} 
-\label{eq:tbb_task_group} 
+Intel's Threading Building Blocks (TBB) %\footnote{\url{https://www.threadingbuildingblocks.org/}}
+is a widely used C++ template library for
+task parallelism. TBB's uses work stealing to schedule tasks, abstracted in the high level construct \texttt{tbb::task\_group}. Each randomized k-d tree is built by recursively splitting the input points as described in Section~\ref{sec:background}.
+Whenever a split occurs, the workload is partitioned into a recursion on $\mathcal{P}_l$ and on $\mathcal{P}_r$, corresponding to two equally sized tasks. These can then be submitted to the TBB scheduler to be treated by distinct threads. Since the work is completely balanced at each split due to splitting on the median, recursion level $i$ will be running a total of $2i$ tasks. To avoid additional overhead, spawning of new tasks is stopped when all available threads are occupied. Because
+$N$ trees are built in parallel, a given task will perform the rest of the recursion when $2 i N\geq P$ without spawning new tasks, where $P$ is the amount of processors available.
+%  at each
+%     node the set of points $\mathcal{P}$ into $\mathcal{P}_{l}$ and $\mathcal{P}_{r}$. Let $C$ denote the number of available hardware 
+%     threads. $T_i$ denote the task of splitting the set of points $\mathcal{P}_{i}$ at the level $i$ into $\mathcal{P}_{l,i}$ and $\mathcal{P}_{r,i}$. The
+%      Task group $G$ is obtained as
+% \begin{align}
+% G=\lbrace T_i \mid i \in [0,i_{max}] \rbrace
+% \end{align} 
+% \label{eq:tbb_task_group} 
+% where $i_{max}$ is the level at which the width of the tree equals $C/N$.
+%  The equation $\ref{eq:tbb_task_group}$  constrains the spanning of tasks
+%   int the task group from the root till the width of the tree equals the number of available hardware threads. 
 
-where $i_{max}$ is the level at which the width of the tree equals $C/N$.
- The equation $\ref{eq:tbb_task_group}$  constrains the spanning of tasks
-  int the task group from the root till the width of the tree equals the number of available hardware threads. 
-  
+  \mypar{Search parallelization} Searching the randomized k-d trees can be parallelized trivially over input queries, as only read access to the trees is required. Each query $q_i$ maintains separate heaps $H_{i,1}$ and $H_{i,2}$ as described in Section~\ref{sec:background}. This is implemented using TBB's \texttt{parallel\_for} loop construct. 
 
  % Now comes the ``beef'' of the report, where you explain what you
 %   did. Again, organize it in paragraphs with titles. As in every section

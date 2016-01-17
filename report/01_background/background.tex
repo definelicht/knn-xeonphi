@@ -1,5 +1,6 @@
-\section{$k$-Nearest Neighbor Search Algorithm}
-  \label{sec:_k_nearest_neighbor_search_algorithm}
+\section{$k$-Nearest Neighbor Search}
+  %\label{sec:_k_nearest_neighbor_search_algorithm}
+  \label{sec:background}
 
   In this section we formally define the $k$-nearest neighbor search problem 
   and introduce the algorithm to build a randomized k-d tree.
@@ -32,24 +33,26 @@
   Since the cardinality of $\mathcal{A}$ is $k$, it follows that $n\geq k$ for 
   the number of points in $\mathcal{P}$.
 
-  \mypar{Randomized k-d~tree build} Building the tree is similar to a regular 
-  k-d tree~\cite{bentley1975a,friedman1977a} with the exception that the 
-  randomized k-d tree splits the data in a $d$-dimensional metric space along 
-  dimension $i_d$, which is chosen randomly out of $D$ possibilities, where $D$ 
-  is the number of the data dimensions with highest variance.  Each point 
-  $p\in\mathcal{P}$ for which the value of the $i_d$-th dimension is lower than 
-  the value of the same dimension of the reference point at the current node is 
+  \mypar{Randomized k-d~tree build} Building the tree is similar to a conventional 
+  k-d tree as described in~\cite{bentley1975a,friedman1977a}, but rather than choosing the dimension used to split the data deterministically, 
+  the data is split % in a $d$-dimensional metric space along 
+  in along some dimension $d$ chosen randomly among the $D$ dimensions with highest variance. Each point 
+  $\pmb{p}\in\mathcal{P}$, for which the value of the $p_i$ dimension is lower than 
+  the value of the median in the chosen dimension at the current node, is 
   placed in a reduced set of points $\mathcal{P}_l\subset\mathcal{P}$ or 
   $\mathcal{P}_r\subset\mathcal{P}$ otherwise, where 
   $\mathcal{P}_l\cup\mathcal{P}_r = \mathcal{P}$.
   The procedure is then recursively applied to the two new branches using the 
   corresponding set of points $\mathcal{P}=\mathcal{P}_l$ or 
   $\mathcal{P}=\mathcal{P}_r$ with a new random choice for the split dimension 
-  $i_d$.  For the work presented here, we follow~\cite{muja2009a} and set 
+  $d$. % The recursion bottoms out for $\left|P\right|=1$, where the remaining point is stored as a leaf, resulting in a total of $2\left|P\right|-1$ nodes.
+  For the work presented here, we follow~\cite{muja2009a} and set 
   $D=5$.
   
   \mypar{Randomized k-d~tree search}
-Multiple randomized k-d trees are searched for  $k$ nearest neighbors. For each query $q_i$ two bounded heaps $H_{1i}$ and $H_{2i}$ are maintained across the randomized k-d forest. $H_{1i}$ contains the $k$ closest neighbors and $H_{2i}$ maintains the most promising branches not yet searched across all trees. After examining a given maximum number of leaves over all the trees the search is stopped resulting in an approximation of the obtained $k$ nearest neighbors. The search can be parallelized trivially. 
+Multiple randomized k-d trees are searched for $k$ nearest neighbors. For each query two bounded heaps $H_{1}$ and $H_{2}$ are maintained across the randomized k-d forest. $H_{1}$ tracks the $k$ closest neighbors and $H_{2}$ maintains the most promising branches not yet searched across all trees according to the distance from the query point their along their split dimension. The algorithm first recurses to the bottom once, storing the most promising branches encounted during
+the recursion in $H_{2}$, then pops the lowest distance branch from $H_{2}$ and repeats the process. After inspecting some maximum number of leaves $m<\left|\mathcal{P}\right|$ among all the randomized trees, the search returns the $k$ closest neighbors found as an approximation of the true $k$ nearest neighbors. As such, $m$ is the parameter that determines the trade-off between accuracy and speed ($m=\left|\mathcal{P}\right|$ falls back to the conventional k-d tree
+algorithm, returning an exact result).
   % Give a short, self-contained summary of necessary
   % background information. For example, assume you present an
   % implementation of sorting algorithms. You could organize into sorting
