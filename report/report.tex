@@ -7,6 +7,45 @@
 \usepackage{spconf,amsmath,amssymb,graphicx}
 \usepackage{hyperref,url}
 
+\usepackage{graphicx}
+\usepackage[x11names, rgb]{xcolor}
+\usepackage[figuresright]{rotating}
+\usepackage{pgfplots}
+\usepackage{tikz}
+\pgfplotsset{compat=1.10}
+\usepgfplotslibrary{fillbetween}
+\usetikzlibrary{snakes,arrows,shapes,plotmarks,calc}
+
+\newcommand\Top{\rule{0pt}{3ex}}
+\newcommand\Bot{\rule[-1.5ex]{0pt}{0pt}}
+
+% Monokai colors
+\definecolor{color0}{HTML}{272822}
+\definecolor{color1}{HTML}{383830}
+\definecolor{color2}{HTML}{49483E}
+\definecolor{color3}{HTML}{75715E}
+\definecolor{color4}{HTML}{A59F85}
+\definecolor{color5}{HTML}{F8F8F2}
+\definecolor{color6}{HTML}{F5F4F1}
+\definecolor{color7}{HTML}{F9F8F5}
+\definecolor{color8}{HTML}{F92672}
+\definecolor{color9}{HTML}{FD971F}
+\definecolor{color10}{HTML}{F4BF75}
+\definecolor{color11}{HTML}{A6E22E}
+\definecolor{color12}{HTML}{A1EFE4}
+\definecolor{color13}{HTML}{66D9EF}
+\definecolor{color14}{HTML}{AE81FF}
+\definecolor{color15}{HTML}{CC6633}
+\newcommand\showcolors{
+\begin{tikzpicture}
+  \foreach \pos/\col in {0em/color0, 1em/color1, 2em/color2, 3em/color3, 
+  4em/color4, 5em/color5, 6em/color6, 7em/color7, 8em/color8, 9em/color9, 
+  10em/color10, 11em/color11, 12em/color12, 13em/color13, 14em/color14, 
+  15em/color15}
+  \fill[\col] (\pos,0) rectangle +(1em, 0.6em);
+\end{tikzpicture}
+}
+
 % Example definitions.
 % --------------------
 % nice symbols for real and complex numbers
