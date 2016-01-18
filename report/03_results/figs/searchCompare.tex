@@ -1,0 +1,30 @@
+% File:   buildCompare.tex
+% Date:   Mon Jan 18 20:54:14 2016
+% Author: Fabian Wermelinger
+% Tag:    Buidl comparison
+% Copyright 2016 ETH Zurich. All Rights Reserved.
+\begin{tikzpicture}[scale=0.7]
+  \begin{semilogyaxis}[
+    log basis y=10,
+    grid=both,
+    log ticks with fixed point,
+    xtick={1, 2, 4, 6, 8, 12, 16, 18, 24},
+    legend style={legend pos=north east, cells={anchor=west}, 
+    font=\footnotesize},
+    xlabel={Number of Cores},
+    ylabel={Mean Search Time $[s]$}]
+
+    % flann
+    \addplot[mark=x, color0, error bars/.cd, y dir=both, y explicit, error bar 
+    style={color3}] table[x index=0, y index=1, y error index=2] 
+    {./03_results/figs/data_1M/flannSearch.dat};
+    \addlegendentry{FLANN}
+
+    % ours
+    \addplot[mark=o, color8, error bars/.cd, y dir=both, y explicit, error bar 
+    style={color0}] table[x index=0, y index=1, y error index=2] 
+    {./03_results/figs/data_1M/randomizedSearch.dat};
+    \addlegendentry{Our Implementation}
+
+  \end{semilogyaxis}
+\end{tikzpicture}

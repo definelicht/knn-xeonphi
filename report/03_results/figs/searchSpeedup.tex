@@ -1,0 +1,20 @@
+% File:   buildSpeedup.tex
+% Date:   Mon Jan 18 22:22:51 2016
+% Author: Fabian Wermelinger
+% Tag:    Buidl Speedup
+% Copyright 2016 ETH Zurich. All Rights Reserved.
+\begin{tikzpicture}[scale=0.7]
+  \begin{axis}[
+    grid=major,
+    xtick={1, 2, 4, 6, 8, 12, 16, 18, 24},
+    legend style={legend pos=south west, cells={anchor=west}, 
+    font=\footnotesize},
+    xlabel={Number of Cores},
+    ylabel={Speedup Factor}]
+
+    % speedup
+    \addplot[mark=x, color8, error bars/.cd, y dir=both, y explicit, error bar 
+    style={color0}] table[x index=0, y index=1, y error index=2] 
+    {./03_results/figs/data_1M/searchSpeedup.dat};
+  \end{axis}
+\end{tikzpicture}
