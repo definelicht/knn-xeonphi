@@ -3,3 +3,7 @@
 *~
 *.pdf
 *.log
+*.bbl
+*.aux
+*.out
+*.blg
