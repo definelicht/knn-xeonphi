@@ -12,6 +12,6 @@
 % steps if you want. Be brief. After the conclusions there are only the references.
 
 The parallel build scheme for randomized k-d trees presented here has been shown to scale to a high number of cores, reducing the build time for four trees from one million SIFT descriptors to roughly half a second on a node consisting of 24 cores. This makes it feasible to construct and query randomized k-d trees in real-time applications even for very large data sets. Search performance on the Xeon Phi was shown to match that of a single 12-core Xeon E5-2697v2 socket
-without explicit Xeon Phi optimizations. Although this corresponds to a slightly worse performance per dollar, it incites some optimism to the potential of the coprocessor, especially for the introduction of the Knight's Landing generation, which should significantly improve cache performance, as well as doubling the number of available cores. 
+without explicit Xeon Phi optimizations. Although this corresponds to a somewhat worse performance per dollar for this application (based on suggested retail price by Intel per January 2016), it incites some optimism to the potential of the coprocessor, especially for the introduction of the Knight's Landing generation, which should significantly improve cache performance, as well as doubling the number of available cores. 
 
 % mainfile: ./../report.tex
