@@ -90,19 +90,22 @@ Clausiusstrasse 33, 8092 Z\"urich}%
 \maketitle
 
 \begin{abstract}
-  We present a parallel $k$-nearest neighbor search algorithm ($k$-NN) for 
-  large datasets of high dimensionality.  A $k$-NN algorithm is used for image 
-  classification, simulations of particles with a large number of attributes, 
-  regression problems as well as other applications.  Depending on the size of 
-  the input, a search of a linear data structure can be computationally 
-  expensive.  We use randomized k-d~trees as an accelerating structure of high 
-  dimensional data to improve search performance.   Our work is focused on the 
-  parallel build of randomized k-d~trees using the Intel threading building 
-  blocks library (TBB), as well as improving search performance using the Intel 
-  XeonPhi co-processor.  We compare our results against the fast library for 
-  approximate nearest neighbor search (FLANN) and observe an improvement of 
-  $11\times$ on two $12$-core Intel Xeon E5-2697v2 CPUs on a node of the ETH 
-  Euler cluster for building the randomized k-d~trees compared against FLANN.  
+  We present a parallel $k$-nearest neighbor search framework ($k$-NN) for 
+  large datasets of high dimensionality.  $k$-NN algorithms are common in
+  applications such as image classification, simulations of particles with a
+  large number of attributes and regression problems.  Determining the neighbors
+  by linear search scales poorly with the amount of training points, so
+  accelerating data structures are used.  Randomized k-d~trees are
+  such a structure that can achieve high performance for large data sets of high
+  dimensionality.  Our work presents a recursive parallel algorithm
+  to construct randomized k-d~trees using the Intel Threading Building Blocks
+  (TBB) library, and presents measurements of $k$-NN search performance on the
+  Intel Xeon Phi coprocessor.  We compare our results against the Fast Library
+  for Approximate Nearest Neighbors (FLANN) and observe an $11\times$ speedup on
+  two 12-core Intel Xeon E5-2697v2 CPUs for building four randomized
+  k-d~trees from 1~million SIFT descriptors, and performance
+  equivalent to a single Xeon CPU when performing parallel search on the
+  Xeon Phi coprocessor,  
 
   % add stuff here for the search performance? Can do but should conclude with 
   % the performance modeling?
@@ -125,7 +128,7 @@ Clausiusstrasse 33, 8092 Z\"urich}%
   \input{./00_introduction/introduction.tex}
   \input{./01_background/background.tex}
   \input{./02_method/method.tex}
-  \input{./02_performance_models/perf_models.tex}
+  % \input{./02_performance_models/perf_models.tex}
   \input{./03_results/results.tex}
   \input{./04_conclusion/conclusion.tex}
   % \input{./05_comments/comments.tex}

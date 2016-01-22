@@ -3,27 +3,28 @@
 
 Parallel Random Access Machine (PRAM) is used in Performance Analysis of Algorithms that run in parallel. According to PRAM model the processors can access the memory in unit time. The algorithm is converted into a Directed Acyclic Graph (DAG). Given the input size $n$, $W(n)$ denotes the $Work$ $Complexity$ and $D(n)$ denotes the $Step$ $Complexity$ of the Algorithm. $D(n)$ limits parallelism and is the length of the critical path of the DAG. We use CREW-PRAM (Concurrent Reads and Exclusive Writes) for the analysis as there are no writing operations in our $k$-NN Algorithm. 
 
-In building the randomized k-d forest $W(n)$ is $O(n)$ as the number of nodes constructed is twice the number of input points. The critical path length of the DAG when we build our binary tree is $O(log(n))$ implying $D(n) = O(log(n))$. PRAM Model defines the Average Parallelism as
+In building the randomized k-d forest $W(n)$ is $2n$ as the number of nodes constructed is twice the number of input points. The critical path length of the DAG when we build our binary tree is $D(n)=\operatorname{log}(n)$. PRAM Model defines the Average Parallelism as
 
 \begin{align}
-Average Parallism = \frac{W(n)}{D(n)} = O(\frac{n}{log(n)})
+  Average Parallism = \frac{W(n)}{D(n)} = \frac{2n}{log(n)}% O(\frac{n}{log(n)})
 \end{align}
  
  Given $p$ processors, the bounds of the Speedup ($S_p$) is given by,
  
  \begin{align}
-\frac{p}{\frac{D(n)}{W(n)} p+1} \leq S_p \leq \frac{W(n)}{D(n)}
+   \frac{p}{\frac{D(n)}{W(n)} p+1} \leq S_p \leq \frac{W(n)}{D(n)}\text{, }\leq p
 \end{align}  
 
 \begin{align}
-\frac{p}{\frac{log(n)}{n} p+1} \leq S_p \leq \frac{n}{log(n)}
+\frac{p}{\frac{log(n)}{2n} p+1} \leq S_p \leq \frac{2n}{log(n)}
 \end{align}
 \label{eq:sp_bounds}
 
-In our case the number of processors ($p$) ranges from $1$ to $24$ and size of the input ($n$) is $1000000$ which makes the fraction $p(log(n)/n)$ tending to $0$ in the above equation. After reducing it we obtain,
+% In our case the number of processors ($p$) ranges from $1$ to $24$ and size of the input ($n$) is $1000000$ which makes the fraction $p(log(n)/n)$ tending to $0$ in the above equation. After reducing it we obtain,
+For large $n$, the speedup becomes:
 
  \begin{align}
-n\gg p \Rightarrow p \leq S_p \leq \frac{n}{log(n)} 
+n\rightarrow \infty \Rightarrow p \leq S_p \leq p \Rightarrow S_p = p 
 \end{align}
 \label{eq:sp_bounds_min}
 

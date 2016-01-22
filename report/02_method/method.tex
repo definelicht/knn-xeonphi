@@ -11,7 +11,7 @@ If $N$ is the number of randomized k-d trees to be built, the trivial first
 
 Intel's Threading Building Blocks (TBB) %\footnote{\url{https://www.threadingbuildingblocks.org/}}
 is a widely used C++ template library for
-task parallelism. TBB's uses work stealing to schedule tasks, abstracted in the high level construct \texttt{tbb::task\_group}. Each randomized k-d tree is built by recursively splitting the input points as described in Section~\ref{sec:background}.
+task parallelism. TBB uses work stealing to schedule tasks between threads, abstracted in the high level construct \texttt{tbb::task\_group}. Each randomized k-d tree is built by recursively splitting the input points as described in Section~\ref{sec:background}.
 Whenever a split occurs, the workload is partitioned into a recursion on $\mathcal{P}_l$ and on $\mathcal{P}_r$, corresponding to two equally sized tasks. These can then be submitted to the TBB scheduler to be treated by distinct threads. Since the work is completely balanced at each split due to splitting on the median, recursion level $i$ will be running a total of $2i$ tasks. To avoid additional overhead, spawning of new tasks is stopped when all available threads are occupied. Because
 $N$ trees are built in parallel, a given task will perform the rest of the recursion when $2 i N\geq P$ without spawning new tasks, where $P$ is the amount of processors available.
 %  at each
@@ -39,6 +39,46 @@ $N$ trees are built in parallel, a given task will perform the rest of the recur
   take advantage of the 512-bit wide SIMD units on the Knight's Corner cores, 
   treating up to 16 single precision floating point numbers in parallel.  
 
+  \mypar{Parallel build performance} Brent's theorem~\cite{brent} is based on the Parallel Random Access Machine (PRAM) model. By representing algorithms as Directed Acyclic Graphs (DAG) and given input size $n$, we define the total work $W(n)$ and the critical path in the DAG $D(n)$. The theorem then approximates the time to solution to be bounded by:
+  \begin{align}
+    T_p(n) \leq D(n) + \frac{W(n)}{p}
+    \label{eq:brent}
+  \end{align}
+  where $p$ is the number of processors. For the tree build we have $W(n)=2n=O(n)$ nodes to construct and critical path $D(n)=\operatorname{log}(n)=O(\operatorname{log}(n))$ through the binary k-d~tree.
+  For speedup Equation~\ref{eq:brent} becomes:
+  \begin{align}
+    \frac{p}{\frac{D(n)}{W(n)} + 1} \leq S_p(n) &\leq \frac{D(n)}{W(n)}\text{, }\leq p
+  \end{align}
+  Plugging in $W(n)$ and $D(n)$ and letting $n\rightarrow\infty$ we get $S_p(n)=p$, meaning that according to the theorem applied to the PRAM model, binary tree algorithms can achieve linear speedup for large values of $n$.  %   represents the limit of parallelism as the critical path of the DAG. % We use CREW-PRAM (Concurrent Reads and Exclusive Writes) for the analysis as there are no writing operations in our $k$-NN Algorithm. 
+%
+% When building the randomized k-d~trees, $W(n)$ is $2n$ as the number of nodes constructed is twice the number of input points. The critical path length of the DAG when we build our binary tree is $D(n)=\operatorname{log}(n)$. The average parallelism of the algorithm is then: 
+%
+% \begin{align}
+%   \frac{W(n)}{D(n)} = \frac{2n}{log(n)}% O(\frac{n}{log(n)})
+% \end{align}
+%  
+% Given $p$ processors, the speedup ($S_p$) is bound by,
+%  
+% \begin{align}
+%   \frac{p}{\frac{D(n)}{W(n)} p+1} \leq S_p \leq \frac{W(n)}{D(n)}\text{, }\leq p
+% \end{align}  
+%
+% Plugging in the total and critical path length of the tree build:
+%
+% \begin{align}
+% \frac{p}{\frac{log(n)}{2n} p+1} \leq S_p \leq \frac{2n}{log(n)}\text{, }\leq p
+% \label{eq:sp_bounds}
+% \end{align}
+%
+% % In our case the number of processors ($p$) ranges from $1$ to $24$ and size of the input ($n$) is $1000000$ which makes the fraction $p(log(n)/n)$ tending to $0$ in the above equation. After reducing it we obtain,
+% For large $n$, as is the case of the experiments conducted below, the speedup approaches linear:
+%
+%  \begin{align}
+% n\rightarrow \infty \Rightarrow p \leq S_p \leq p \Rightarrow S_p = p 
+% \label{eq:sp_bounds_min}
+% \end{align}
+%
+% As such we expect a linear scaling of the build algorithm for large data sets.
 
  % Now comes the ``beef'' of the report, where you explain what you
 %   did. Again, organize it in paragraphs with titles. As in every section
