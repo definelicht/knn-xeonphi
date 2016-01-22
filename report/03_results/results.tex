@@ -11,19 +11,19 @@
   % Then explain what kind of benchmarks you ran. The idea is to give enough information so the experiments are reproducible by somebody else on his or her code.
   % For sorting you would talk about the input sizes. For a tool that performs NUMA optimization, you would specify the programs you ran.
 
-  \mypar{Experimental setup}
+  \mypar{Setup}
   Benchmarks were run on two distinct setups: a node of ETH's Euler cluster, 
   a convential x86 multicore platform, and on ETH's Einstein machine with 
   ssh-access to a Knight's Corner Intel Xeon Phi coprocessor. An Euler node 
   consists of two Intel Xeon E5-2697v2 processors for a total of 24 x86 cores 
   in a dual-socket NUMA setup. The x86 benchmark code was compiled with GCC 
   4.9.2 with OpenMP 4.0, while the Xeon Phi host code was compiled with GCC 
-  4.8.2. Both setups used precompiled TBB 4.4 for parallelization.
+  4.8.2. Both setups used the precompiled version of TBB 4.4 provided by Intel for parallelization.
   \begin{figure}[tb]
     \centering
     \resizebox{\columnwidth}{!}{\input{./03_results/figs/buildCompare.tex}}
     \caption{Mean build time for the FLANN library and our implementation using 
-    $1$~Million SIFT vectors.}
+    $1$~million SIFT vectors.}
     \label{fig:build_comparison}
   \end{figure}
   The Xeon Phi setup additionally uses the MPI library from Intel Parallel 
@@ -37,22 +37,19 @@
     \label{fig:build_speedup}
   \end{figure}
   All code was compiled with \texttt{-std=c++11} standard, \texttt{-O3} 
-  optimization and \texttt{-march=native} SIMD vectorization for both GCC and 
-  ICC. In particular computing Euclidian distances between high-dimensional 
-  input offers a potential gain of
-  vectorization. 
+  optimization and \texttt{-march=native} SIMD vectorization (the Euler cluster supports 256-bit vector instructions) for both GCC and 
+  ICC. % In particular computing Euclidian distances between high-dimensional input offers a potential gain of vectorization. 
 
   \mypar{Data set}
   Measurements are done on the TEXMEX~\cite{jegou2011} data set, which is 
   a collection of SIFT~\cite{lowe1999a,lowe2004a} descriptors: 128-dimensional 
-  vectors invariantly describing features in images, commonly used in computer 
+  vectors of single precision floating points numbers invariantly describing features in images, commonly used in computer 
   vision to recognize transformations between images taken of the same 
   underlying content. The data set is produced specifically by the authors 
   of~\cite{jegou2011} to test the performance of nearest neighbor algorithms, 
   as it offers a high input size of
-  high-dimensional data applied to a common real world problem. Results 
-  presented below are run for the data set containing one million reference 
-  points queried with ten thousand test points with $k=100$.  
+  high-dimensional data applied to a common real world problem.
+  Comparisons between the vectors are done using the Euclidian distance between them for a relatively low computation intensity of $\approx3/4$ floating point operations per byte. Results presented below are run for the data set containing 1~million reference points queried with 10000 test points for $k=100$.  
 
   % \mypar{Results}
   % Next divide the experiments into classes, one paragraph for each. In each class of experiments you typically pursue one questions that then is answered by a suitable plot or plots. For example, first you may want to investigate the performance behavior with changing input size, then how your code compares to external benchmarks.
@@ -77,18 +74,17 @@
   % \end{figure}
 
   \mypar{Build performance} To evaluate the performance of the build 
-  parallelization scheme described in Section~\ref{sec:method}, an 
-  implementation is compared against the implementation provided by the FLANN 
+  parallelization scheme described in Section~\ref{sec:method}, our 
+  implementation is compared to the implementation provided by the FLANN 
   library. Because FLANN implements no parallelization of the tree build, 
-  including the trivial parallelization of building $N$ randomized trees in 
+  and in particular no trivial parallelization of building $N$ randomized trees in 
   parallel, the implementation described here must scale beyond $N$ processors 
   to demonstrate the advantage of the recursive task
-  spawning scheme.  The mean build time out of three measurements is compared 
-  against the FLANN library in Figure~\ref{fig:build_comparison}.
-  In Figure~\ref{fig:build_speedup} we show the obtained speedup over the FLANN 
-  library based on the measurements for the build time shown in 
-  Figure~\ref{fig:build_comparison}.  All measurements shown here are obtained 
-  from the Euler compute cluster using one node with $24$ cores.
+  spawning scheme. In the below we fix $N=4$, as this is enough for satisfactory search performance, while only offering a small initial amount of trivial parallellism up to 4 cores.
+  This work contains no demonstration of the suggested 
+  parallel build scheme run on Xeon Phi, as compiling the code with ICC for 
+  unknown reasons resulted in a build time two orders of magnitude higher than 
+  when compiled with GCC, even when run exclusively on the host platform.
   \begin{figure}[tb]
     \centering
     \resizebox{\columnwidth}{!}{\input{./03_results/figs/searchCompare.tex}}
@@ -96,44 +92,33 @@
     using $4$ randomized k-d trees.}
     \label{fig:search_comparison}
   \end{figure}
-  The hardware configuration for this platform is described in the Experimental 
-  Setup section above.  This work contains no demonstration of the suggested 
-  parallel build scheme run on Xeon Phi, as compiling the code with ICC for 
-  unknown reasons resulted in a build time two orders of magnitude higher than 
-  when compiled with GCC even on the host platform.
+  The mean build time of the two implementations are compared 
+  in Figure~\ref{fig:build_comparison}, while Figure~\ref{fig:build_speedup} shows the computed speedup over the FLANN 
+  library. Because of the lack of parallelization in FLANN, Figure~\ref{fig:build_speedup} can be considered a strong scaling plot with the FLANN single core performance as the baseline. % All measurements shown here are obtained from the Euler compute cluster using one node with $24$ cores.
+  The performance is seen to scale well beyond the initial parallel construction of 4 trees, and the build time is down to $0.55$ seconds when utilizing all 24 cores on an Euler node, a speedup of $11$ when compared to the FLANN baseline. This shows a significant benefit of the parallel tree build scheme. As seen for the first data point in Figure~\ref{fig:build_comparison}, the single core performance of FLANN is $45\%$ better than for our implementation, meaning that scalar
+  optimizations to our code should have a significant positive impact on the speedup. 
 
   \mypar{Search performance} Since no novel work is done to improve over the 
   search algorithm implemented for randomized k-d trees in the FLANN library, 
   the performance of the implementation presented here is only expected to 
   match that of FLANN. The contribution of this work is to evaluate the 
-  performance of the search algorithm on the Xeon Phi platform, whose 
-  architecture is expected to be a good match to the randomized k-d tree search 
-  due to several factors: firstly the highly parallel nature of the search 
-  offers full hardware utilization when queried with a sufficiently high 
-  numbers of points, while not being fully vectorizable due to the 
-  heterogeneousness of the tree structure.
-  \begin{figure}[tb]
+  performance of the search algorithm on the Xeon Phi platform.   \begin{figure}[tb]
     \centering
     \resizebox{\columnwidth}{!}{\input{./03_results/figs/searchSpeedup.tex}}
-    \caption{Speedup factor against the FLANN library for searching $10000$ 
+    \caption{Speedup of $100$-nearest neighbor search against the FLANN library for $10000$ 
     query vectors.}
     \label{fig:search_speedup}
   \end{figure}
-  Secondly, the algorithm offers benefits of sharing memory between caches 
-  without causing performance hits due to writes. Thirdly, computing the 
-  Euclidian distance between high dimensional input offers an opportunity to 
-  take advantage of the 512-bit wide SIMD units on the Knight's Corner cores, 
-  treating up to 16 single precision floating point numbers in parallel.  
   Because of the issues with the build algorithm compiled with ICC as described 
   above, search on the Xeon Phi is done by building the randomized trees on the 
-  host processor, then transferring this using explicit MPI send and receive 
+  host processor, then transferring the tree structure using explicit MPI send and receive 
   calls. This allows the host and coprocessor binaries to be built and linked 
   separately with different compilers, relying on Intel's MPI library for 
   interfacing.
-  Figure~\ref{fig:search_comparison} shows the average time of three 
-  measurements observed for a search of $10000$ query vectors using $4$ 
-  randomized k-d trees.  The measurements have been conducted on one node of 
-  the Euler platform specified above.  The speedup based on these measurements 
-  relative to the FLANN library is shown in Figure~\ref{fig:search_speedup}.
+  Figure~\ref{fig:search_comparison} shows mean search time observed for a search of $10000$ query vectors using $4$ randomized k-d trees on both the Euler and Xeon Phi platforms, while Figure~\ref{fig:search_speedup} plots the speedup over the FLANN library. % The measurements have been conducted on one node of the Euler platform specified above.  The speedup based on these measurements relative to the FLANN library is shown in Figure~\ref{fig:search_speedup}.
+  The scaling between our implementation and that of FLANN is seen in Figure~\ref{fig:search_speedup} to be very similar, but the performance on the Euler node is consistently a factor $0.4$-$0.6$ slower. As with the results for the parallel build described above, this means that our single core performance is lacking when compared to the FLANN library. Because the search parallelizes trivially, the data points in Figure~\ref{fig:search_speedup} are approximately measurements of the same
+  number, namely the speedup of the single core performance, resulting in a large propagated error relative to the scale of the plot. The error on the measurements for 12 and 24 cores are considerably lower than the other data points, suggesting that the large deviation is due to jobs contesting resources when running on the Euler batch system and reserving less than the number of cores available on one or two full NUMA nodes.
+  For the Xeon Phi the search is run on 240 threads, utilizing the 4 hyperthreads on each of the 60 available cores. The time to solution intersects that of the Euler node at around 12 cores, corresponding to a relative factor of $0.2$ performance per Xeon Phi core to Xeon core. The Xeon Phi numbers do not include the time spent on data transfer, but these numbers become negligible if utilizing the full PCI Express bus for the application described here. When tested for the purpose of this
+  work, send/receive calls of MPI only offered $10\%$ of the memory bandwidth promised by PCI Express, while offload mode almost reached the data sheet performance. Even with this performance hit, memory transfers would only add $20\%$ to the total time to solution, down to $2\%$ if the full bandwidth was to be exploited. 
 
   % mainfile: ./../report.tex
