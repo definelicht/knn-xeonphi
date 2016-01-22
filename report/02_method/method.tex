@@ -28,6 +28,18 @@ $N$ trees are built in parallel, a given task will perform the rest of the recur
 
   \mypar{Search parallelization} Searching the randomized k-d trees can be parallelized trivially over input queries, as only read access to the trees is required. Each query $q_i$ maintains separate heaps $H_{i,1}$ and $H_{i,2}$ as described in Section~\ref{sec:background}. This is implemented using TBB's \texttt{parallel\_for} loop construct. 
 
+  \mypar{Xeon Phi} The MIC architecture offered on the Xeon Phi is expected to be a good match to the randomized k-d tree search 
+  due to several factors: firstly the highly parallel nature of the search 
+  offers full hardware utilization when queried with a sufficiently high 
+  numbers of points, while not being fully vectorizable due to the 
+  heterogeneousness of the tree structure.
+  Secondly, the algorithm offers benefits of sharing memory between caches 
+  without causing performance hits due to writes. Thirdly, computing the 
+  Euclidian distance between high dimensional input offers an opportunity to 
+  take advantage of the 512-bit wide SIMD units on the Knight's Corner cores, 
+  treating up to 16 single precision floating point numbers in parallel.  
+
+
  % Now comes the ``beef'' of the report, where you explain what you
 %   did. Again, organize it in paragraphs with titles. As in every section
  %  you start with a very brief overview of the section.
