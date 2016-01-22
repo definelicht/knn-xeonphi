@@ -46,8 +46,7 @@
   corresponding set of points $\mathcal{P}=\mathcal{P}_l$ or 
   $\mathcal{P}=\mathcal{P}_r$ with a new random choice for the split dimension 
   $d$. % The recursion bottoms out for $\left|P\right|=1$, where the remaining point is stored as a leaf, resulting in a total of $2\left|P\right|-1$ nodes.
-  For the work presented here, we follow~\cite{muja2009a} and set 
-  $D=5$.
+  % For the work presented here, we follow~\cite{muja2009a} and set $D=5$.
   
   \mypar{Randomized k-d~tree search}
 Multiple randomized k-d trees are searched for $k$ nearest neighbors. For each query two bounded heaps $H_{1}$ and $H_{2}$ are maintained across the randomized k-d forest. $H_{1}$ tracks the $k$ closest neighbors and $H_{2}$ maintains the most promising branches not yet searched across all trees according to the distance from the query point their along their split dimension. The algorithm first recurses to the bottom once, storing the most promising branches encounted during
