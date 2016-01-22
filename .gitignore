@@ -8,6 +8,7 @@
 *.bbl
 *.blg
 *.out
+*.dvi
 build/
 myBuild/
 data/
