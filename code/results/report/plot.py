@@ -40,9 +40,10 @@ for method in ["build", "search"]:
   with open("{}Speedup.dat".format(method), "w") as outFile:
     for cores in sorted(flann[method], key=int):
       flannMean = np.mean(flann[method][cores])
-      flannStd = np.std(flann[method][cores])
+      flannStd = np.std(flann[method][cores])/len(flann[method][cores])**.5
       ourMean = np.mean(randomized[method][cores])
-      ourStd = np.std(randomized[method][cores])
+      ourStd = (np.std(randomized[method][cores])
+                /len(randomized[method][cores])**.5)
       speedup = flannMean/ourMean
       error = speedup * ((flannStd/flannMean)**2 + (ourStd/ourMean)**2)**.5
       outFile.write("%i\t%e\t%e\n" % (int(cores), speedup, error))
